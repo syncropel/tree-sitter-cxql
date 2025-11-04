@@ -1,0 +1,40 @@
+{
+  "$schema": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+  "grammars": [
+    {
+      "name": "cxql",
+      "camelcase": "Cxql",
+      "title": "cxql",
+      "scope": "source.cxql",
+      "file-types": [
+        "cxql"
+      ],
+      "injection-regex": "^cxql$",
+      "class-name": "TreeSitterCxql"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "Tree-sitter grammar for the Syncropel Query Language (CXQL)",
+    "authors": [
+      {
+        "name": "syncropel",
+        "email": "dev@syncropel.com",
+        "url": "https://syncropel.com/"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/syncropel/tree-sitter-cxql"
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": true,
+    "zig": false
+  }
+}
