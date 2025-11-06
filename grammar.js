@@ -1,8 +1,9 @@
 /**
  * Tree-sitter Grammar for CXQL (Context Query Language)
- * Phase 1: Foundation - Tokens & Literals
+ * Phase 2: Primary Expressions & Lists/Records
  *
  * This phase covers:
+ * Phase 1:
  * - Program structure
  * - Comments
  * - Identifiers
@@ -12,6 +13,11 @@
  * - Boolean literals
  * - Null literal
  * - Variable references
+ *
+ * Phase 2 (NEW):
+ * - Parenthesized expressions
+ * - List literals (with trailing commas, nested)
+ * - Record literals (with string keys, trailing commas, nested)
  */
 
 module.exports = grammar({
@@ -43,17 +49,22 @@ module.exports = grammar({
     expression_statement: ($) => $._expression,
 
     // ============================================
-    // EXPRESSIONS (Phase 1: Primary expressions only)
+    // EXPRESSIONS
     // ============================================
 
     _expression: ($) =>
       choice(
+        // Phase 1: Literals and identifiers
         $.identifier,
         $.number_literal,
         $.string_literal,
         $.boolean_literal,
         $.null_literal,
-        $.variable_reference
+        $.variable_reference,
+        // Phase 2: Primary expressions (NEW)
+        $.parenthesized_expression,
+        $.list_literal,
+        $.record_literal
         // Future phases will add: binary_expression, unary_expression,
         // function_call, member_expression, pipe_expression, etc.
       ),
@@ -65,6 +76,50 @@ module.exports = grammar({
     // Valid identifiers: start with letter, continue with letter/digit/underscore/hyphen
     // Examples: hello, my_variable, kebab-case-name, user123
     identifier: ($) => /[a-zA-Z][a-zA-Z0-9_-]*/,
+
+    // ============================================
+    // PRIMARY EXPRESSIONS (Phase 2)
+    // ============================================
+
+    // Parenthesized expression: (expr)
+    parenthesized_expression: ($) => seq("(", $._expression, ")"),
+
+    // List literal: [], [1], [1, 2, 3], [1, 2, 3,]
+    list_literal: ($) =>
+      seq(
+        "[",
+        optional(
+          seq(
+            $._expression,
+            repeat(seq(",", $._expression)),
+            optional(",") // Trailing comma is allowed
+          )
+        ),
+        "]"
+      ),
+
+    // Record literal: {}, {key: value}, {key1: val1, key2: val2,}
+    record_literal: ($) =>
+      seq(
+        "{",
+        optional(
+          seq(
+            $.property,
+            repeat(seq(",", $.property)),
+            optional(",") // Trailing comma is allowed
+          )
+        ),
+        "}"
+      ),
+
+    // Property in record: key: value
+    // Keys can be identifiers or string literals
+    property: ($) =>
+      seq(
+        field("key", choice($.identifier, $.string_literal)),
+        ":",
+        field("value", $._expression)
+      ),
 
     // ============================================
     // LITERALS

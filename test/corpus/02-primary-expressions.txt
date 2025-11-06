@@ -1,0 +1,523 @@
+================================================================================
+Parenthesized Expression - Simple
+================================================================================
+(42)
+---
+(program
+  (expression_statement
+    (parenthesized_expression (number_literal))))
+
+================================================================================
+Parenthesized Expression - Variable
+================================================================================
+($x)
+---
+(program
+  (expression_statement
+    (parenthesized_expression
+      (variable_reference (identifier)))))
+
+================================================================================
+Parenthesized Expression - Nested
+================================================================================
+((10))
+---
+(program
+  (expression_statement
+    (parenthesized_expression
+      (parenthesized_expression (number_literal)))))
+
+================================================================================
+Parenthesized Expression - String
+================================================================================
+("hello")
+---
+(program
+  (expression_statement
+    (parenthesized_expression (string_literal))))
+
+================================================================================
+List Literal - Empty
+================================================================================
+[]
+---
+(program
+  (expression_statement
+    (list_literal)))
+
+================================================================================
+List Literal - Single Element Number
+================================================================================
+[1]
+---
+(program
+  (expression_statement
+    (list_literal (number_literal))))
+
+================================================================================
+List Literal - Single Element Boolean
+================================================================================
+[true]
+---
+(program
+  (expression_statement
+    (list_literal (boolean_literal))))
+
+================================================================================
+List Literal - Single Element Variable
+================================================================================
+[$x]
+---
+(program
+  (expression_statement
+    (list_literal
+      (variable_reference (identifier)))))
+
+================================================================================
+List Literal - Multiple Numbers
+================================================================================
+[1, 2, 3]
+---
+(program
+  (expression_statement
+    (list_literal
+      (number_literal)
+      (number_literal)
+      (number_literal))))
+
+================================================================================
+List Literal - Multiple Mixed Types
+================================================================================
+[true, false, null]
+---
+(program
+  (expression_statement
+    (list_literal
+      (boolean_literal)
+      (boolean_literal)
+      (null_literal))))
+
+================================================================================
+List Literal - With Variables
+================================================================================
+[$x, $y, $z]
+---
+(program
+  (expression_statement
+    (list_literal
+      (variable_reference (identifier))
+      (variable_reference (identifier))
+      (variable_reference (identifier)))))
+
+================================================================================
+List Literal - Trailing Comma Single
+================================================================================
+[1,]
+---
+(program
+  (expression_statement
+    (list_literal (number_literal))))
+
+================================================================================
+List Literal - Trailing Comma Multiple
+================================================================================
+[1, 2, 3,]
+---
+(program
+  (expression_statement
+    (list_literal
+      (number_literal)
+      (number_literal)
+      (number_literal))))
+
+================================================================================
+List Literal - Nested Lists
+================================================================================
+[[1, 2], [3, 4]]
+---
+(program
+  (expression_statement
+    (list_literal
+      (list_literal
+        (number_literal)
+        (number_literal))
+      (list_literal
+        (number_literal)
+        (number_literal)))))
+
+================================================================================
+List Literal - Deeply Nested
+================================================================================
+[1, [2, 3], 4]
+---
+(program
+  (expression_statement
+    (list_literal
+      (number_literal)
+      (list_literal
+        (number_literal)
+        (number_literal))
+      (number_literal))))
+
+================================================================================
+List Literal - With Strings
+================================================================================
+["hello", "world"]
+---
+(program
+  (expression_statement
+    (list_literal
+      (string_literal)
+      (string_literal))))
+
+================================================================================
+List Literal - Mixed Content
+================================================================================
+[1, "two", true, null, $x]
+---
+(program
+  (expression_statement
+    (list_literal
+      (number_literal)
+      (string_literal)
+      (boolean_literal)
+      (null_literal)
+      (variable_reference (identifier)))))
+
+================================================================================
+Record Literal - Empty
+================================================================================
+{}
+---
+(program
+  (expression_statement
+    (record_literal)))
+
+================================================================================
+Record Literal - Single Property Identifier Key
+================================================================================
+{name: "Alice"}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (string_literal)))))
+
+================================================================================
+Record Literal - Single Property Number Value
+================================================================================
+{age: 30}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (number_literal)))))
+
+================================================================================
+Record Literal - Single Property Boolean Value
+================================================================================
+{active: true}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (boolean_literal)))))
+
+================================================================================
+Record Literal - Multiple Properties
+================================================================================
+{name: "Alice", age: 30}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (string_literal))
+      (property
+        key: (identifier)
+        value: (number_literal)))))
+
+================================================================================
+Record Literal - Three Properties
+================================================================================
+{x: 10, y: 20, z: 30}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (number_literal))
+      (property
+        key: (identifier)
+        value: (number_literal))
+      (property
+        key: (identifier)
+        value: (number_literal)))))
+
+================================================================================
+Record Literal - Trailing Comma Single
+================================================================================
+{name: "Alice",}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (string_literal)))))
+
+================================================================================
+Record Literal - Trailing Comma Multiple
+================================================================================
+{name: "Alice", age: 30,}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (string_literal))
+      (property
+        key: (identifier)
+        value: (number_literal)))))
+
+================================================================================
+Record Literal - Nested Record
+================================================================================
+{user: {name: "Alice", age: 30}}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (record_literal
+          (property
+            key: (identifier)
+            value: (string_literal))
+          (property
+            key: (identifier)
+            value: (number_literal)))))))
+
+================================================================================
+Record Literal - Nested Coordinates
+================================================================================
+{coords: {x: 10, y: 20}}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (record_literal
+          (property
+            key: (identifier)
+            value: (number_literal))
+          (property
+            key: (identifier)
+            value: (number_literal)))))))
+
+================================================================================
+Record Literal - String Keys
+================================================================================
+{"first-name": "Alice"}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (string_literal)
+        value: (string_literal)))))
+
+================================================================================
+Record Literal - String Keys Multiple
+================================================================================
+{"user.id": 123, "user.name": "Alice"}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (string_literal)
+        value: (number_literal))
+      (property
+        key: (string_literal)
+        value: (string_literal)))))
+
+================================================================================
+Record Literal - With Variable Values
+================================================================================
+{name: $userName, age: $userAge}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (variable_reference (identifier)))
+      (property
+        key: (identifier)
+        value: (variable_reference (identifier))))))
+
+================================================================================
+Record Literal - With List Value
+================================================================================
+{tags: ["admin", "user"]}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (list_literal
+          (string_literal)
+          (string_literal))))))
+
+================================================================================
+Record Literal - Complex Nested
+================================================================================
+{name: "Alice", tags: ["admin"], meta: {active: true}}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (string_literal))
+      (property
+        key: (identifier)
+        value: (list_literal (string_literal)))
+      (property
+        key: (identifier)
+        value: (record_literal
+          (property
+            key: (identifier)
+            value: (boolean_literal)))))))
+
+================================================================================
+Mixed - List of Records
+================================================================================
+[{name: "Alice"}, {name: "Bob"}]
+---
+(program
+  (expression_statement
+    (list_literal
+      (record_literal
+        (property
+          key: (identifier)
+          value: (string_literal)))
+      (record_literal
+        (property
+          key: (identifier)
+          value: (string_literal))))))
+
+================================================================================
+Mixed - Record with List Properties
+================================================================================
+{users: ["Alice", "Bob"], count: 2}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (list_literal
+          (string_literal)
+          (string_literal)))
+      (property
+        key: (identifier)
+        value: (number_literal)))))
+
+================================================================================
+Mixed - Deeply Nested Structure
+================================================================================
+{data: [{id: 1, values: [10, 20]}, {id: 2, values: [30, 40]}]}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (list_literal
+          (record_literal
+            (property
+              key: (identifier)
+              value: (number_literal))
+            (property
+              key: (identifier)
+              value: (list_literal
+                (number_literal)
+                (number_literal))))
+          (record_literal
+            (property
+              key: (identifier)
+              value: (number_literal))
+            (property
+              key: (identifier)
+              value: (list_literal
+                (number_literal)
+                (number_literal)))))))))
+
+================================================================================
+Mixed - Parenthesized List
+================================================================================
+([1, 2, 3])
+---
+(program
+  (expression_statement
+    (parenthesized_expression
+      (list_literal
+        (number_literal)
+        (number_literal)
+        (number_literal)))))
+
+================================================================================
+Mixed - Parenthesized Record
+================================================================================
+({name: "Alice"})
+---
+(program
+  (expression_statement
+    (parenthesized_expression
+      (record_literal
+        (property
+          key: (identifier)
+          value: (string_literal))))))
+
+================================================================================
+Mixed - All Primary Expressions
+================================================================================
+42
+"hello"
+true
+null
+$x
+(10)
+[1, 2, 3]
+{name: "Alice"}
+---
+(program
+  (expression_statement (number_literal))
+  (expression_statement (string_literal))
+  (expression_statement (boolean_literal))
+  (expression_statement (null_literal))
+  (expression_statement (variable_reference (identifier)))
+  (expression_statement (parenthesized_expression (number_literal)))
+  (expression_statement
+    (list_literal
+      (number_literal)
+      (number_literal)
+      (number_literal)))
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (string_literal)))))
