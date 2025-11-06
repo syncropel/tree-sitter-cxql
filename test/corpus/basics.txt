@@ -1,0 +1,366 @@
+================================================================================
+Identifiers - Simple
+================================================================================
+hello
+---
+(program
+  (expression_statement (identifier)))
+
+================================================================================
+Identifiers - With Underscore
+================================================================================
+my_variable
+---
+(program
+  (expression_statement (identifier)))
+
+================================================================================
+Identifiers - Kebab Case
+================================================================================
+kebab-case-name
+---
+(program
+  (expression_statement (identifier)))
+
+================================================================================
+Identifiers - With Numbers
+================================================================================
+user123
+---
+(program
+  (expression_statement (identifier)))
+
+================================================================================
+Identifiers - Multiple
+================================================================================
+hello
+world
+foo
+---
+(program
+  (expression_statement (identifier))
+  (expression_statement (identifier))
+  (expression_statement (identifier)))
+
+================================================================================
+Number Literals - Positive Integer
+================================================================================
+42
+---
+(program
+  (expression_statement (number_literal)))
+
+================================================================================
+Number Literals - Negative Integer
+================================================================================
+-10
+---
+(program
+  (expression_statement (number_literal)))
+
+================================================================================
+Number Literals - Zero
+================================================================================
+0
+---
+(program
+  (expression_statement (number_literal)))
+
+================================================================================
+Number Literals - Multiple Integers
+================================================================================
+1
+2
+3
+---
+(program
+  (expression_statement (number_literal))
+  (expression_statement (number_literal))
+  (expression_statement (number_literal)))
+
+================================================================================
+Number Literals - Float
+================================================================================
+3.14
+---
+(program
+  (expression_statement (number_literal)))
+
+================================================================================
+Number Literals - Negative Float
+================================================================================
+-2.5
+---
+(program
+  (expression_statement (number_literal)))
+
+================================================================================
+Number Literals - Float Zero
+================================================================================
+0.0
+---
+(program
+  (expression_statement (number_literal)))
+
+================================================================================
+Number Literals - Scientific Notation Positive Exponent
+================================================================================
+1.5e10
+---
+(program
+  (expression_statement (number_literal)))
+
+================================================================================
+Number Literals - Scientific Notation Negative Exponent
+================================================================================
+2e-3
+---
+(program
+  (expression_statement (number_literal)))
+
+================================================================================
+Number Literals - Scientific Notation With Negative Number
+================================================================================
+-3.14e5
+---
+(program
+  (expression_statement (number_literal)))
+
+================================================================================
+Number Literals - Scientific Notation With Plus
+================================================================================
+1.5e+10
+---
+(program
+  (expression_statement (number_literal)))
+
+================================================================================
+String Literals - Simple
+================================================================================
+"hello"
+---
+(program
+  (expression_statement (string_literal)))
+
+================================================================================
+String Literals - With Spaces
+================================================================================
+"hello world"
+---
+(program
+  (expression_statement (string_literal)))
+
+================================================================================
+String Literals - With Escaped Quotes
+================================================================================
+"with \"quotes\""
+---
+(program
+  (expression_statement (string_literal)))
+
+================================================================================
+String Literals - With Newline Escape
+================================================================================
+"with\nnewlines"
+---
+(program
+  (expression_statement (string_literal)))
+
+================================================================================
+String Literals - With Tab Escape
+================================================================================
+"with\ttabs"
+---
+(program
+  (expression_statement (string_literal)))
+
+================================================================================
+String Literals - With Backslash Escape
+================================================================================
+"with\\backslash"
+---
+(program
+  (expression_statement (string_literal)))
+
+================================================================================
+String Literals - Empty
+================================================================================
+""
+---
+(program
+  (expression_statement (string_literal)))
+
+================================================================================
+String Literals - Multiple
+================================================================================
+"first"
+"second"
+"third"
+---
+(program
+  (expression_statement (string_literal))
+  (expression_statement (string_literal))
+  (expression_statement (string_literal)))
+
+================================================================================
+Boolean Literals - True
+================================================================================
+true
+---
+(program
+  (expression_statement (boolean_literal)))
+
+================================================================================
+Boolean Literals - False
+================================================================================
+false
+---
+(program
+  (expression_statement (boolean_literal)))
+
+================================================================================
+Boolean Literals - Multiple
+================================================================================
+true
+false
+true
+---
+(program
+  (expression_statement (boolean_literal))
+  (expression_statement (boolean_literal))
+  (expression_statement (boolean_literal)))
+
+================================================================================
+Null Literal
+================================================================================
+null
+---
+(program
+  (expression_statement (null_literal)))
+
+================================================================================
+Null Literal - Multiple
+================================================================================
+null
+null
+---
+(program
+  (expression_statement (null_literal))
+  (expression_statement (null_literal)))
+
+================================================================================
+Variable References - Simple
+================================================================================
+$x
+---
+(program
+  (expression_statement 
+    (variable_reference (identifier))))
+
+================================================================================
+Variable References - With Underscore
+================================================================================
+$my_var
+---
+(program
+  (expression_statement 
+    (variable_reference (identifier))))
+
+================================================================================
+Variable References - With Hyphen
+================================================================================
+$user-id
+---
+(program
+  (expression_statement 
+    (variable_reference (identifier))))
+
+================================================================================
+Variable References - Multiple
+================================================================================
+$x
+$y
+$z
+---
+(program
+  (expression_statement (variable_reference (identifier)))
+  (expression_statement (variable_reference (identifier)))
+  (expression_statement (variable_reference (identifier))))
+
+================================================================================
+Comments - Single Line
+================================================================================
+# This is a comment
+---
+(program
+  (comment))
+
+================================================================================
+Comments - Multiple Lines
+================================================================================
+# Comment 1
+# Comment 2
+# Comment 3
+---
+(program
+  (comment)
+  (comment)
+  (comment))
+
+================================================================================
+Comments - With Code
+================================================================================
+42
+# This is a comment
+100
+---
+(program
+  (expression_statement (number_literal))
+  (comment)
+  (expression_statement (number_literal)))
+
+================================================================================
+Comments - Trailing
+================================================================================
+42  # trailing comment
+---
+(program
+  (expression_statement (number_literal))
+  (comment))
+
+
+================================================================================
+Mixed - All Literal Types
+================================================================================
+42
+"hello"
+true
+null
+$variable
+---
+(program
+  (expression_statement (number_literal))
+  (expression_statement (string_literal))
+  (expression_statement (boolean_literal))
+  (expression_statement (null_literal))
+  (expression_statement (variable_reference (identifier))))
+
+================================================================================
+Mixed - Complex Example
+================================================================================
+# Program start
+hello
+123
+"world"
+true
+$x
+# End
+---
+(program
+  (comment)
+  (expression_statement (identifier))
+  (expression_statement (number_literal))
+  (expression_statement (string_literal))
+  (expression_statement (boolean_literal))
+  (expression_statement (variable_reference (identifier)))
+  (comment))
