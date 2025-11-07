@@ -1,0 +1,36 @@
+# Phase 4 Test: Unary Operators & Function Calls
+
+# === Unary Operators ===
+-10
+-$x
+not true
+not $active
+--5
+not not false
+
+# === Function Calls - Simple ===
+get()
+count()
+core.where()
+
+# === Function Calls - With Arguments ===
+get("data.csv")
+max(1, 2, 3)
+http.get("https://api.example.com")
+
+# === Function Calls - Keyword Arguments ===
+get(path="data.csv")
+get(path="data.csv", format="csv")
+http.get("url", timeout=30, retry=true)
+
+# === Function Calls - Complex ===
+http.client.post("url", data={key: "value"})
+transform([1, 2, 3], scale=2)
+outer(inner(middle(10)))
+
+# === Mixed Expressions ===
+-get("value")
+not http.get("api") == null
+abs(-10) + abs(-20)
+get("x") * get("y")
+max(-$a, -$b, -$c)

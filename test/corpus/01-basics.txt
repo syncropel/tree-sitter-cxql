@@ -56,7 +56,9 @@ Number Literals - Negative Integer
 -10
 ---
 (program
-  (expression_statement (number_literal)))
+  (expression_statement
+    (unary_expression
+      operand: (number_literal))))
 
 ================================================================================
 Number Literals - Zero
@@ -92,7 +94,9 @@ Number Literals - Negative Float
 -2.5
 ---
 (program
-  (expression_statement (number_literal)))
+  (expression_statement
+    (unary_expression
+      operand: (number_literal))))
 
 ================================================================================
 Number Literals - Float Zero
@@ -124,7 +128,9 @@ Number Literals - Scientific Notation With Negative Number
 -3.14e5
 ---
 (program
-  (expression_statement (number_literal)))
+  (expression_statement
+    (unary_expression
+      operand: (number_literal))))
 
 ================================================================================
 Number Literals - Scientific Notation With Plus

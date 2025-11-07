@@ -1,0 +1,492 @@
+================================================================================
+Arithmetic - Multiplication Simple
+================================================================================
+2 * 3
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (number_literal)
+      right: (number_literal))))
+
+================================================================================
+Arithmetic - Multiplication Variables
+================================================================================
+$x * $y
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (variable_reference (identifier))
+      right: (variable_reference (identifier)))))
+
+================================================================================
+Arithmetic - Multiplication Float
+================================================================================
+10 * 2.5
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (number_literal)
+      right: (number_literal))))
+
+================================================================================
+Arithmetic - Division
+================================================================================
+10 / 2
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (number_literal)
+      right: (number_literal))))
+
+================================================================================
+Arithmetic - Division Variables
+================================================================================
+$x / $y
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (variable_reference (identifier))
+      right: (variable_reference (identifier)))))
+
+================================================================================
+Arithmetic - Modulo
+================================================================================
+10 % 3
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (number_literal)
+      right: (number_literal))))
+
+================================================================================
+Arithmetic - Modulo Variables
+================================================================================
+$x % $y
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (variable_reference (identifier))
+      right: (variable_reference (identifier)))))
+
+================================================================================
+Arithmetic - Addition
+================================================================================
+1 + 2
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (number_literal)
+      right: (number_literal))))
+
+================================================================================
+Arithmetic - Addition Variables
+================================================================================
+$x + $y
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (variable_reference (identifier))
+      right: (variable_reference (identifier)))))
+
+================================================================================
+Arithmetic - Subtraction
+================================================================================
+10 - 5
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (number_literal)
+      right: (number_literal))))
+
+================================================================================
+Arithmetic - Subtraction Variables
+================================================================================
+$x - $y
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (variable_reference (identifier))
+      right: (variable_reference (identifier)))))
+
+================================================================================
+Arithmetic - Precedence Multiply Before Add
+================================================================================
+2 + 3 * 4
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (number_literal)
+      right: (binary_expression
+        left: (number_literal)
+        right: (number_literal)))))
+
+================================================================================
+Arithmetic - Precedence Multiply Before Subtract
+================================================================================
+10 - 2 * 3
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (number_literal)
+      right: (binary_expression
+        left: (number_literal)
+        right: (number_literal)))))
+
+================================================================================
+Arithmetic - Precedence Division Before Add
+================================================================================
+10 + 6 / 2
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (number_literal)
+      right: (binary_expression
+        left: (number_literal)
+        right: (number_literal)))))
+
+================================================================================
+Arithmetic - Left Associativity Addition
+================================================================================
+1 + 2 + 3
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (binary_expression
+        left: (number_literal)
+        right: (number_literal))
+      right: (number_literal))))
+
+================================================================================
+Arithmetic - Left Associativity Subtraction
+================================================================================
+10 - 5 - 2
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (binary_expression
+        left: (number_literal)
+        right: (number_literal))
+      right: (number_literal))))
+
+================================================================================
+Arithmetic - Left Associativity Multiplication
+================================================================================
+2 * 3 * 4
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (binary_expression
+        left: (number_literal)
+        right: (number_literal))
+      right: (number_literal))))
+
+================================================================================
+Arithmetic - Parentheses Override Precedence
+================================================================================
+(2 + 3) * 4
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (parenthesized_expression
+        (binary_expression
+          left: (number_literal)
+          right: (number_literal)))
+      right: (number_literal))))
+
+================================================================================
+Arithmetic - Complex Expression
+================================================================================
+2 * 3 + 4 * 5
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (binary_expression
+        left: (number_literal)
+        right: (number_literal))
+      right: (binary_expression
+        left: (number_literal)
+        right: (number_literal)))))
+
+================================================================================
+Comparison - Less Than
+================================================================================
+$x < 10
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (variable_reference (identifier))
+      right: (number_literal))))
+
+================================================================================
+Comparison - Less Than Numbers
+================================================================================
+1 < 2
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (number_literal)
+      right: (number_literal))))
+
+================================================================================
+Comparison - Greater Than
+================================================================================
+$x > 10
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (variable_reference (identifier))
+      right: (number_literal))))
+
+================================================================================
+Comparison - Less Than or Equal
+================================================================================
+$x <= 10
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (variable_reference (identifier))
+      right: (number_literal))))
+
+================================================================================
+Comparison - Greater Than or Equal
+================================================================================
+$x >= 10
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (variable_reference (identifier))
+      right: (number_literal))))
+
+================================================================================
+Comparison - Precedence Arithmetic Before Comparison
+================================================================================
+$x + 5 > 10
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (binary_expression
+        left: (variable_reference (identifier))
+        right: (number_literal))
+      right: (number_literal))))
+
+================================================================================
+Comparison - Both Sides Arithmetic
+================================================================================
+$x + 5 < $y * 2
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (binary_expression
+        left: (variable_reference (identifier))
+        right: (number_literal))
+      right: (binary_expression
+        left: (variable_reference (identifier))
+        right: (number_literal)))))
+
+================================================================================
+Equality - Equal
+================================================================================
+$x == 10
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (variable_reference (identifier))
+      right: (number_literal))))
+
+================================================================================
+Equality - Equal Booleans
+================================================================================
+true == false
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (boolean_literal)
+      right: (boolean_literal))))
+
+================================================================================
+Equality - Not Equal
+================================================================================
+$x != 10
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (variable_reference (identifier))
+      right: (number_literal))))
+
+================================================================================
+Equality - Not Equal Strings
+================================================================================
+"hello" != "world"
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (string_literal)
+      right: (string_literal))))
+
+================================================================================
+Logical - AND Simple
+================================================================================
+true and false
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (boolean_literal)
+      right: (boolean_literal))))
+
+================================================================================
+Logical - AND With Comparison
+================================================================================
+$x > 10 and $y < 20
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (binary_expression
+        left: (variable_reference (identifier))
+        right: (number_literal))
+      right: (binary_expression
+        left: (variable_reference (identifier))
+        right: (number_literal)))))
+
+================================================================================
+Logical - OR Simple
+================================================================================
+true or false
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (boolean_literal)
+      right: (boolean_literal))))
+
+================================================================================
+Logical - OR With Comparison
+================================================================================
+$x < 0 or $x > 100
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (binary_expression
+        left: (variable_reference (identifier))
+        right: (number_literal))
+      right: (binary_expression
+        left: (variable_reference (identifier))
+        right: (number_literal)))))
+
+================================================================================
+Logical - Precedence AND Before OR
+================================================================================
+true or false and true
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (boolean_literal)
+      right: (binary_expression
+        left: (boolean_literal)
+        right: (boolean_literal)))))
+
+================================================================================
+Logical - Parentheses Override
+================================================================================
+(true or false) and true
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (parenthesized_expression
+        (binary_expression
+          left: (boolean_literal)
+          right: (boolean_literal)))
+      right: (boolean_literal))))
+
+================================================================================
+Complex - All Operator Types
+================================================================================
+($x + 5) * 2 > 10 and $y == true or $z != null
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (binary_expression
+        left: (binary_expression
+          left: (binary_expression
+            left: (parenthesized_expression
+              (binary_expression
+                left: (variable_reference (identifier))
+                right: (number_literal)))
+            right: (number_literal))
+          right: (number_literal))
+        right: (binary_expression
+          left: (variable_reference (identifier))
+          right: (boolean_literal)))
+      right: (binary_expression
+        left: (variable_reference (identifier))
+        right: (null_literal)))))
+
+================================================================================
+Complex - Nested Arithmetic
+================================================================================
+((2 + 3) * (4 - 1)) / 5
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (parenthesized_expression
+        (binary_expression
+          left: (parenthesized_expression
+            (binary_expression
+              left: (number_literal)
+              right: (number_literal)))
+          right: (parenthesized_expression
+            (binary_expression
+              left: (number_literal)
+              right: (number_literal)))))
+      right: (number_literal))))
+
+================================================================================
+Complex - Comparison Chain
+================================================================================
+$a < $b and $b < $c
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (binary_expression
+        left: (variable_reference (identifier))
+        right: (variable_reference (identifier)))
+      right: (binary_expression
+        left: (variable_reference (identifier))
+        right: (variable_reference (identifier))))))

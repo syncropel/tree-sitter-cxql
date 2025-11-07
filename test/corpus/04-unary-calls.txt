@@ -1,0 +1,357 @@
+================================================================================
+Unary - Negation Simple
+================================================================================
+-10
+---
+(program
+  (expression_statement
+    (unary_expression
+      operand: (number_literal))))
+
+================================================================================
+Unary - Negation Variable
+================================================================================
+-$x
+---
+(program
+  (expression_statement
+    (unary_expression
+      operand: (variable_reference (identifier)))))
+
+================================================================================
+Unary - Not True
+================================================================================
+not true
+---
+(program
+  (expression_statement
+    (logical_not_expression
+      operand: (boolean_literal))))
+
+================================================================================
+Unary - Not Variable
+================================================================================
+not $x
+---
+(program
+  (expression_statement
+    (logical_not_expression
+      operand: (variable_reference (identifier)))))
+
+================================================================================
+Unary - Double Negation
+================================================================================
+--10
+---
+(program
+  (expression_statement
+    (unary_expression
+      operand: (unary_expression
+        operand: (number_literal)))))
+
+================================================================================
+Unary - Double Not
+================================================================================
+not not true
+---
+(program
+  (expression_statement
+    (logical_not_expression
+      operand: (logical_not_expression
+        operand: (boolean_literal)))))
+
+================================================================================
+Unary - Precedence Before Multiplication
+================================================================================
+-2 * 3
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (unary_expression
+        operand: (number_literal))
+      right: (number_literal))))
+
+================================================================================
+Unary - Precedence Before Addition
+================================================================================
+-2 + 3
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (unary_expression
+        operand: (number_literal))
+      right: (number_literal))))
+
+================================================================================
+Unary - With Parentheses
+================================================================================
+-(2 + 3)
+---
+(program
+  (expression_statement
+    (unary_expression
+      operand: (parenthesized_expression
+        (binary_expression
+          left: (number_literal)
+          right: (number_literal))))))
+
+================================================================================
+Unary - Not With Comparison
+================================================================================
+not $x > 10
+---
+(program
+  (expression_statement
+    (logical_not_expression
+      operand: (binary_expression
+        left: (variable_reference (identifier))
+        right: (number_literal)))))
+
+================================================================================
+Function Call - No Arguments
+================================================================================
+get()
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list))))
+
+================================================================================
+Function Call - Qualified Name
+================================================================================
+core.where()
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      function: (identifier)
+      arguments: (argument_list))))
+
+================================================================================
+Function Call - Single Positional Argument
+================================================================================
+get("data")
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list (string_literal)))))
+
+================================================================================
+Function Call - Multiple Positional Arguments
+================================================================================
+max(1, 2, 3)
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (number_literal)
+        (number_literal)
+        (number_literal)))))
+
+================================================================================
+Function Call - Single Keyword Argument
+================================================================================
+get(path="data.csv")
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (keyword_argument
+          name: (identifier)
+          value: (string_literal))))))
+
+================================================================================
+Function Call - Multiple Keyword Arguments
+================================================================================
+get(path="data.csv", format="csv")
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (keyword_argument
+          name: (identifier)
+          value: (string_literal))
+        (keyword_argument
+          name: (identifier)
+          value: (string_literal))))))
+
+================================================================================
+Function Call - Positional Then Keywords
+================================================================================
+http.get("url", timeout=30, retry=true)
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      function: (identifier)
+      arguments: (argument_list
+        (string_literal)
+        (keyword_argument
+          name: (identifier)
+          value: (number_literal))
+        (keyword_argument
+          name: (identifier)
+          value: (boolean_literal))))))
+
+================================================================================
+Function Call - Variable Arguments
+================================================================================
+count($x)
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (variable_reference (identifier))))))
+
+================================================================================
+Function Call - Expression Arguments
+================================================================================
+add($x + 1, $y * 2)
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (binary_expression
+          left: (variable_reference (identifier))
+          right: (number_literal))
+        (binary_expression
+          left: (variable_reference (identifier))
+          right: (number_literal))))))
+
+================================================================================
+Function Call - Nested Calls
+================================================================================
+outer(inner(10))
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (function_call
+          function: (identifier)
+          arguments: (argument_list (number_literal)))))))
+
+================================================================================
+Function Call - Deeply Qualified Name
+================================================================================
+http.client.get("url")
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      function: (identifier)
+      function: (identifier)
+      arguments: (argument_list (string_literal)))))
+
+================================================================================
+Function Call - Trailing Comma
+================================================================================
+get("data", format="csv",)
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (string_literal)
+        (keyword_argument
+          name: (identifier)
+          value: (string_literal))))))
+
+================================================================================
+Function Call - Complex Arguments
+================================================================================
+transform([1, 2, 3], {scale: 2})
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (list_literal
+          (number_literal)
+          (number_literal)
+          (number_literal))
+        (record_literal
+          (property
+            key: (identifier)
+            value: (number_literal)))))))
+
+================================================================================
+Mixed - Unary In Function Call
+================================================================================
+abs(-10)
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (unary_expression
+          operand: (number_literal))))))
+
+================================================================================
+Mixed - Function Call In Unary
+================================================================================
+-get("value")
+---
+(program
+  (expression_statement
+    (unary_expression
+      operand: (function_call
+        function: (identifier)
+        arguments: (argument_list (string_literal))))))
+
+================================================================================
+Mixed - Function Call In Binary Expression
+================================================================================
+get("x") + get("y")
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (function_call
+        function: (identifier)
+        arguments: (argument_list (string_literal)))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list (string_literal))))))
+
+================================================================================
+Complex - All Features Together
+================================================================================
+not http.get("api", timeout=30) == null
+---
+(program
+  (expression_statement
+    (logical_not_expression
+      operand: (binary_expression
+        left: (function_call
+          function: (identifier)
+          function: (identifier)
+          arguments: (argument_list
+            (string_literal)
+            (keyword_argument
+              name: (identifier)
+              value: (number_literal))))
+        right: (null_literal)))))
