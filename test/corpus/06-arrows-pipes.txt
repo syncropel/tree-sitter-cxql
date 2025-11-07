@@ -1,0 +1,371 @@
+================================================================================
+Arrow - Simple
+================================================================================
+x => x + 1
+---
+(program
+  (expression_statement
+    (arrow_expression
+      parameter: (identifier)
+      body: (binary_expression
+        left: (identifier)
+        right: (number_literal)))))
+
+================================================================================
+Arrow - With Variable Reference
+================================================================================
+x => $x + 1
+---
+(program
+  (expression_statement
+    (arrow_expression
+      parameter: (identifier)
+      body: (binary_expression
+        left: (variable_reference (identifier))
+        right: (number_literal)))))
+
+================================================================================
+Arrow - Complex Body
+================================================================================
+x => x > 10 and x < 20
+---
+(program
+  (expression_statement
+    (arrow_expression
+      parameter: (identifier)
+      body: (binary_expression
+        left: (binary_expression
+          left: (identifier)
+          right: (number_literal))
+        right: (binary_expression
+          left: (identifier)
+          right: (number_literal))))))
+
+================================================================================
+Arrow - In Function Call Single Argument
+================================================================================
+where(x => x > 10)
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (arrow_expression
+          parameter: (identifier)
+          body: (binary_expression
+            left: (identifier)
+            right: (number_literal)))))))
+
+================================================================================
+Arrow - In Function Call Multiple Arguments
+================================================================================
+transform(x => x * 2, y => y + 1)
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (arrow_expression
+          parameter: (identifier)
+          body: (binary_expression
+            left: (identifier)
+            right: (number_literal)))
+        (arrow_expression
+          parameter: (identifier)
+          body: (binary_expression
+            left: (identifier)
+            right: (number_literal)))))))
+
+================================================================================
+Arrow - As Let Value
+================================================================================
+let f = x => x + 1
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (arrow_expression
+      parameter: (identifier)
+      body: (binary_expression
+        left: (identifier)
+        right: (number_literal)))))
+
+================================================================================
+Pipe - Simple
+================================================================================
+$data | count
+---
+(program
+  (expression_statement
+    (pipe_expression
+      left: (variable_reference (identifier))
+      right: (identifier))))
+
+================================================================================
+Pipe - With Function Call
+================================================================================
+$data | where(x => x > 10)
+---
+(program
+  (expression_statement
+    (pipe_expression
+      left: (variable_reference (identifier))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (arrow_expression
+            parameter: (identifier)
+            body: (binary_expression
+              left: (identifier)
+              right: (number_literal))))))))
+
+================================================================================
+Pipe - Chained Two Stages
+================================================================================
+$data | where(x => x > 10) | count
+---
+(program
+  (expression_statement
+    (pipe_expression
+      left: (pipe_expression
+        left: (variable_reference (identifier))
+        right: (function_call
+          function: (identifier)
+          arguments: (argument_list
+            (arrow_expression
+              parameter: (identifier)
+              body: (binary_expression
+                left: (identifier)
+                right: (number_literal))))))
+      right: (identifier))))
+
+================================================================================
+Pipe - Chained Three Stages
+================================================================================
+$data | where(x => x.active) | select("id", "name") | limit(10)
+---
+(program
+  (expression_statement
+    (pipe_expression
+      left: (pipe_expression
+        left: (pipe_expression
+          left: (variable_reference (identifier))
+          right: (function_call
+            function: (identifier)
+            arguments: (argument_list
+              (arrow_expression
+                parameter: (identifier)
+                body: (member_expression
+                  object: (identifier)
+                  property: (identifier))))))
+        right: (function_call
+          function: (identifier)
+          arguments: (argument_list
+            (string_literal)
+            (string_literal))))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (number_literal))))))
+
+================================================================================
+Pipe - With Parentheses
+================================================================================
+($data | where(x => x > 10)) | count
+---
+(program
+  (expression_statement
+    (pipe_expression
+      left: (parenthesized_expression
+        (pipe_expression
+          left: (variable_reference (identifier))
+          right: (function_call
+            function: (identifier)
+            arguments: (argument_list
+              (arrow_expression
+                parameter: (identifier)
+                body: (binary_expression
+                  left: (identifier)
+                  right: (number_literal)))))))
+      right: (identifier))))
+
+================================================================================
+Pipe - From Function Call
+================================================================================
+get("data") | where(x => x > 10)
+---
+(program
+  (expression_statement
+    (pipe_expression
+      left: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (string_literal)))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (arrow_expression
+            parameter: (identifier)
+            body: (binary_expression
+              left: (identifier)
+              right: (number_literal))))))))
+
+================================================================================
+Pipe - From Let Statement
+================================================================================
+let result = $data | count
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (pipe_expression
+      left: (variable_reference (identifier))
+      right: (identifier))))
+
+================================================================================
+Integration - Arrow With Pipe
+================================================================================
+$data | filter(x => x > 10) | map(x => x * 2)
+---
+(program
+  (expression_statement
+    (pipe_expression
+      left: (pipe_expression
+        left: (variable_reference (identifier))
+        right: (function_call
+          function: (identifier)
+          arguments: (argument_list
+            (arrow_expression
+              parameter: (identifier)
+              body: (binary_expression
+                left: (identifier)
+                right: (number_literal))))))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (arrow_expression
+            parameter: (identifier)
+            body: (binary_expression
+              left: (identifier)
+              right: (number_literal))))))))
+
+================================================================================
+Integration - Complex Pipeline
+================================================================================
+let result = get("data.csv")
+  | where(row => row.amount > 100)
+  | select("id", "name")
+  | limit(10)
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (pipe_expression
+      left: (pipe_expression
+        left: (pipe_expression
+          left: (function_call
+            function: (identifier)
+            arguments: (argument_list
+              (string_literal)))
+          right: (function_call
+            function: (identifier)
+            arguments: (argument_list
+              (arrow_expression
+                parameter: (identifier)
+                body: (binary_expression
+                  left: (member_expression
+                    object: (identifier)
+                    property: (identifier))
+                  right: (number_literal))))))
+        right: (function_call
+          function: (identifier)
+          arguments: (argument_list
+            (string_literal)
+            (string_literal))))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (number_literal))))))
+
+================================================================================
+Integration - Arrow In Block
+================================================================================
+{
+  let f = x => x + 1
+  $f
+}
+---
+(program
+  (expression_statement
+    (block
+      (let_statement
+        name: (identifier)
+        value: (arrow_expression
+          parameter: (identifier)
+          body: (binary_expression
+            left: (identifier)
+            right: (number_literal))))
+      result: (variable_reference (identifier)))))
+
+================================================================================
+Integration - Pipe In If Condition
+================================================================================
+if {$data | count > 10} {true} else {false}
+---
+(program
+  (expression_statement
+    (if_expression
+      condition: (block
+        result: (binary_expression
+          left: (pipe_expression
+            left: (variable_reference (identifier))
+            right: (identifier))
+          right: (number_literal)))
+      consequent: (block
+        result: (boolean_literal))
+      alternative: (block
+        result: (boolean_literal)))))
+
+================================================================================
+Integration - Multiple Arrows And Pipes
+================================================================================
+let process = $data
+  | filter(x => x.active)
+  | map(x => x.value * 2)
+  | reduce(sum => sum + 1)
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (pipe_expression
+      left: (pipe_expression
+        left: (pipe_expression
+          left: (variable_reference (identifier))
+          right: (function_call
+            function: (identifier)
+            arguments: (argument_list
+              (arrow_expression
+                parameter: (identifier)
+                body: (member_expression
+                  object: (identifier)
+                  property: (identifier))))))
+        right: (function_call
+          function: (identifier)
+          arguments: (argument_list
+            (arrow_expression
+              parameter: (identifier)
+              body: (binary_expression
+                left: (member_expression
+                  object: (identifier)
+                  property: (identifier))
+                right: (number_literal))))))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (arrow_expression
+            parameter: (identifier)
+            body: (binary_expression
+              left: (identifier)
+              right: (number_literal))))))))

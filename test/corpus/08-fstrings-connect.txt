@@ -1,0 +1,358 @@
+================================================================================
+F-String - Simple No Interpolation
+================================================================================
+$"hello"
+---
+(program
+  (expression_statement
+    (fstring_literal
+      (fstring_text))))
+
+================================================================================
+F-String - Empty
+================================================================================
+$""
+---
+(program
+  (expression_statement
+    (fstring_literal)))
+
+================================================================================
+F-String - Single Interpolation Variable
+================================================================================
+$"Hello, {$name}!"
+---
+(program
+  (expression_statement
+    (fstring_literal
+      (fstring_text)
+      (fstring_interpolation
+        expression: (variable_reference (identifier)))
+      (fstring_text))))
+
+================================================================================
+F-String - Interpolation At Start
+================================================================================
+$"{$x} is the value"
+---
+(program
+  (expression_statement
+    (fstring_literal
+      (fstring_interpolation
+        expression: (variable_reference (identifier)))
+      (fstring_text))))
+
+================================================================================
+F-String - Interpolation At End
+================================================================================
+$"The value is {$x}"
+---
+(program
+  (expression_statement
+    (fstring_literal
+      (fstring_text)
+      (fstring_interpolation
+        expression: (variable_reference (identifier))))))
+
+================================================================================
+F-String - Multiple Interpolations
+================================================================================
+$"x={$x}, y={$y}"
+---
+(program
+  (expression_statement
+    (fstring_literal
+      (fstring_text)
+      (fstring_interpolation
+        expression: (variable_reference (identifier)))
+      (fstring_text)
+      (fstring_interpolation
+        expression: (variable_reference (identifier))))))
+
+================================================================================
+F-String - With Binary Expression
+================================================================================
+$"Total: {$price * $quantity}"
+---
+(program
+  (expression_statement
+    (fstring_literal
+      (fstring_text)
+      (fstring_interpolation
+        expression: (binary_expression
+          left: (variable_reference (identifier))
+          right: (variable_reference (identifier)))))))
+
+================================================================================
+F-String - With Member Access
+================================================================================
+$"Name: {$user.name}"
+---
+(program
+  (expression_statement
+    (fstring_literal
+      (fstring_text)
+      (fstring_interpolation
+        expression: (member_expression
+          object: (variable_reference (identifier))
+          property: (identifier))))))
+
+================================================================================
+F-String - With Function Call
+================================================================================
+$"Count: {count($data)}"
+---
+(program
+  (expression_statement
+    (fstring_literal
+      (fstring_text)
+      (fstring_interpolation
+        expression: (function_call
+          function: (identifier)
+          arguments: (argument_list
+            (variable_reference (identifier))))))))
+
+================================================================================
+F-String - Complex Expression
+================================================================================
+$"Result: {$x + $y * 2}"
+---
+(program
+  (expression_statement
+    (fstring_literal
+      (fstring_text)
+      (fstring_interpolation
+        expression: (binary_expression
+          left: (variable_reference (identifier))
+          right: (binary_expression
+            left: (variable_reference (identifier))
+            right: (number_literal)))))))
+
+================================================================================
+F-String - In Let Statement
+================================================================================
+let message = $"Hello, {$name}!"
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (fstring_literal
+      (fstring_text)
+      (fstring_interpolation
+        expression: (variable_reference (identifier)))
+      (fstring_text))))
+
+================================================================================
+F-String - In Function Argument
+================================================================================
+log($"Value: {$x}")
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (fstring_literal
+          (fstring_text)
+          (fstring_interpolation
+            expression: (variable_reference (identifier))))))))
+
+================================================================================
+F-String - In Record Property
+================================================================================
+{message: $"Hello, {$name}!"}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (fstring_literal
+          (fstring_text)
+          (fstring_interpolation
+            expression: (variable_reference (identifier)))
+          (fstring_text))))))
+
+================================================================================
+F-String - In List
+================================================================================
+[$"First: {$a}", $"Second: {$b}"]
+---
+(program
+  (expression_statement
+    (list_literal
+      (fstring_literal
+        (fstring_text)
+        (fstring_interpolation
+          expression: (variable_reference (identifier))))
+      (fstring_literal
+        (fstring_text)
+        (fstring_interpolation
+          expression: (variable_reference (identifier)))))))
+
+================================================================================
+Connect - Simple String
+================================================================================
+connect("user:api", as="api")
+---
+(program
+  (connect_statement
+    source: (string_literal)
+    alias: (string_literal)))
+
+================================================================================
+Connect - With Record Blueprint
+================================================================================
+connect({blueprint: "community/openai@1.0"}, as="llm")
+---
+(program
+  (connect_statement
+    source: (record_literal
+      (property
+        key: (identifier)
+        value: (string_literal)))
+    alias: (string_literal)))
+
+================================================================================
+Connect - With Secrets
+================================================================================
+connect({
+  blueprint: "community/openai@1.0",
+  secrets: {api_key: "xxx"}
+}, as="llm")
+---
+(program
+  (connect_statement
+    source: (record_literal
+      (property
+        key: (identifier)
+        value: (string_literal))
+      (property
+        key: (identifier)
+        value: (record_literal
+          (property
+            key: (identifier)
+            value: (string_literal)))))
+    alias: (string_literal)))
+
+================================================================================
+Connect - Multiple Properties
+================================================================================
+connect({
+  blueprint: "community/postgres@2.0",
+  host: "localhost",
+  port: 5432
+}, as="db")
+---
+(program
+  (connect_statement
+    source: (record_literal
+      (property
+        key: (identifier)
+        value: (string_literal))
+      (property
+        key: (identifier)
+        value: (string_literal))
+      (property
+        key: (identifier)
+        value: (number_literal)))
+    alias: (string_literal)))
+
+================================================================================
+Connect - With Variable
+================================================================================
+connect($config, as="service")
+---
+(program
+  (connect_statement
+    source: (variable_reference (identifier))
+    alias: (string_literal)))
+
+================================================================================
+Connect - Multiple Statements
+================================================================================
+connect("db:postgres", as="db")
+connect("api:openai", as="ai")
+---
+(program
+  (connect_statement
+    source: (string_literal)
+    alias: (string_literal))
+  (connect_statement
+    source: (string_literal)
+    alias: (string_literal)))
+
+================================================================================
+Integration - F-String With Connect
+================================================================================
+connect({blueprint: $"service/{$version}"}, as="api")
+---
+(program
+  (connect_statement
+    source: (record_literal
+      (property
+        key: (identifier)
+        value: (fstring_literal
+          (fstring_text)
+          (fstring_interpolation
+            expression: (variable_reference (identifier))))))
+    alias: (string_literal)))
+
+================================================================================
+Integration - Connect Then Use In F-String
+================================================================================
+connect("db:main", as="db")
+let msg = $"Connected to {$db}"
+---
+(program
+  (connect_statement
+    source: (string_literal)
+    alias: (string_literal))
+  (let_statement
+    name: (identifier)
+    value: (fstring_literal
+      (fstring_text)
+      (fstring_interpolation
+        expression: (variable_reference (identifier))))))
+
+================================================================================
+Integration - F-String In Pipeline
+================================================================================
+$data | map(x => $"ID: {x.id}")
+---
+(program
+  (expression_statement
+    (pipe_expression
+      left: (variable_reference (identifier))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (arrow_expression
+            parameter: (identifier)
+            body: (fstring_literal
+              (fstring_text)
+              (fstring_interpolation
+                expression: (member_expression
+                  object: (identifier)
+                  property: (identifier))))))))))
+
+================================================================================
+Integration - Complex F-String
+================================================================================
+let report = $"Total: {$count}, Average: {$sum / $count}, Status: {$status}"
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (fstring_literal
+      (fstring_text)
+      (fstring_interpolation
+        expression: (variable_reference (identifier)))
+      (fstring_text)
+      (fstring_interpolation
+        expression: (binary_expression
+          left: (variable_reference (identifier))
+          right: (variable_reference (identifier))))
+      (fstring_text)
+      (fstring_interpolation
+        expression: (variable_reference (identifier))))))

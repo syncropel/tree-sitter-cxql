@@ -1,0 +1,486 @@
+================================================================================
+Member Access - On Variable
+================================================================================
+$data.name
+---
+(program
+  (expression_statement
+    (member_expression
+      object: (variable_reference (identifier))
+      property: (identifier))))
+
+================================================================================
+Member Access - On Identifier
+================================================================================
+x.active
+---
+(program
+  (expression_statement
+    (member_expression
+      object: (identifier)
+      property: (identifier))))
+
+================================================================================
+Member Access - Chained Two Levels
+================================================================================
+$user.address.city
+---
+(program
+  (expression_statement
+    (member_expression
+      object: (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier))
+      property: (identifier))))
+
+================================================================================
+Member Access - Chained Three Levels
+================================================================================
+a.b.c
+---
+(program
+  (expression_statement
+    (member_expression
+      object: (member_expression
+        object: (identifier)
+        property: (identifier))
+      property: (identifier))))
+
+================================================================================
+Member Access - Chained Four Levels
+================================================================================
+$obj.field.subfield.value
+---
+(program
+  (expression_statement
+    (member_expression
+      object: (member_expression
+        object: (member_expression
+          object: (variable_reference (identifier))
+          property: (identifier))
+        property: (identifier))
+      property: (identifier))))
+
+================================================================================
+Member Access - Method Call
+================================================================================
+$data.where(x => x > 10)
+---
+(program
+  (expression_statement
+    (function_call
+      function: (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier))
+      arguments: (argument_list
+        (arrow_expression
+          parameter: (identifier)
+          body: (binary_expression
+            left: (identifier)
+            right: (number_literal)))))))
+
+================================================================================
+Member Access - Chained Method Calls
+================================================================================
+$data.where(x => x.active).select("id", "name")
+---
+(program
+  (expression_statement
+    (function_call
+      function: (member_expression
+        object: (function_call
+          function: (member_expression
+            object: (variable_reference (identifier))
+            property: (identifier))
+          arguments: (argument_list
+            (arrow_expression
+              parameter: (identifier)
+              body: (member_expression
+                object: (identifier)
+                property: (identifier)))))
+        property: (identifier))
+      arguments: (argument_list
+        (string_literal)
+        (string_literal)))))
+
+================================================================================
+Member Access - On Parenthesized Expression
+================================================================================
+(get("data")).where(x => x > 10)
+---
+(program
+  (expression_statement
+    (function_call
+      function: (member_expression
+        object: (parenthesized_expression
+          (function_call
+            function: (identifier)
+            arguments: (argument_list
+              (string_literal))))
+        property: (identifier))
+      arguments: (argument_list
+        (arrow_expression
+          parameter: (identifier)
+          body: (binary_expression
+            left: (identifier)
+            right: (number_literal)))))))
+
+================================================================================
+Member Access - Mixed With Pipe
+================================================================================
+$data.where(x => x > 10) | limit(5)
+---
+(program
+  (expression_statement
+    (pipe_expression
+      left: (function_call
+        function: (member_expression
+          object: (variable_reference (identifier))
+          property: (identifier))
+        arguments: (argument_list
+          (arrow_expression
+            parameter: (identifier)
+            body: (binary_expression
+              left: (identifier)
+              right: (number_literal)))))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (number_literal))))))
+
+================================================================================
+Member Access - In Record Property
+================================================================================
+{x: $user.name, y: $user.age}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (member_expression
+          object: (variable_reference (identifier))
+          property: (identifier)))
+      (property
+        key: (identifier)
+        value: (member_expression
+          object: (variable_reference (identifier))
+          property: (identifier))))))
+
+================================================================================
+Member Access - In List
+================================================================================
+[$obj.x, $obj.y, $obj.z]
+---
+(program
+  (expression_statement
+    (list_literal
+      (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier))
+      (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier))
+      (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier)))))
+
+================================================================================
+Member Access - In Binary Expression
+================================================================================
+$obj.value + 10
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier))
+      right: (number_literal))))
+
+================================================================================
+Member Access - Both Sides Binary
+================================================================================
+$a.value + $b.value
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier))
+      right: (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier)))))
+
+================================================================================
+Member Access - In Comparison
+================================================================================
+$obj.count > 100
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier))
+      right: (number_literal))))
+
+================================================================================
+Member Access - In Function Argument
+================================================================================
+process($data.value)
+---
+(program
+  (expression_statement
+    (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (member_expression
+          object: (variable_reference (identifier))
+          property: (identifier))))))
+
+================================================================================
+Member Access - In Arrow Body
+================================================================================
+x => x.active
+---
+(program
+  (expression_statement
+    (arrow_expression
+      parameter: (identifier)
+      body: (member_expression
+        object: (identifier)
+        property: (identifier)))))
+
+================================================================================
+Member Access - Chained In Arrow Body
+================================================================================
+x => x.user.name
+---
+(program
+  (expression_statement
+    (arrow_expression
+      parameter: (identifier)
+      body: (member_expression
+        object: (member_expression
+          object: (identifier)
+          property: (identifier))
+        property: (identifier)))))
+
+================================================================================
+Member Access - In Let Value
+================================================================================
+let name = $user.profile.name
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (member_expression
+      object: (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier))
+      property: (identifier))))
+
+================================================================================
+Member Access - In Block Result
+================================================================================
+{
+  let user = $data
+  user.name
+}
+---
+(program
+  (expression_statement
+    (block
+      (let_statement
+        name: (identifier)
+        value: (variable_reference (identifier)))
+      result: (member_expression
+        object: (identifier)
+        property: (identifier)))))
+
+================================================================================
+Member Access - In If Condition
+================================================================================
+if {$obj.valid} {$obj.value} else {0}
+---
+(program
+  (expression_statement
+    (if_expression
+      condition: (block
+        result: (member_expression
+          object: (variable_reference (identifier))
+          property: (identifier)))
+      consequent: (block
+        result: (member_expression
+          object: (variable_reference (identifier))
+          property: (identifier)))
+      alternative: (block
+        result: (number_literal)))))
+
+================================================================================
+Member Access - Precedence With Arithmetic
+================================================================================
+a.b + c.d
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (member_expression
+        object: (identifier)
+        property: (identifier))
+      right: (member_expression
+        object: (identifier)
+        property: (identifier)))))
+
+================================================================================
+Member Access - Precedence With Multiplication
+================================================================================
+a.b * c.d
+---
+(program
+  (expression_statement
+    (binary_expression
+      left: (member_expression
+        object: (identifier)
+        property: (identifier))
+      right: (member_expression
+        object: (identifier)
+        property: (identifier)))))
+
+================================================================================
+Member Access - With Negation
+================================================================================
+-$obj.value
+---
+(program
+  (expression_statement
+    (unary_expression
+      operand: (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier)))))
+
+================================================================================
+Member Access - With Not
+================================================================================
+not $obj.active
+---
+(program
+  (expression_statement
+    (logical_not_expression
+      operand: (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier)))))
+
+================================================================================
+Integration - Complex Pipeline With Member Access
+================================================================================
+$data
+  | where(row => row.amount > 100)
+  | select(item => item.id)
+  | limit(10)
+---
+(program
+  (expression_statement
+    (pipe_expression
+      left: (pipe_expression
+        left: (pipe_expression
+          left: (variable_reference (identifier))
+          right: (function_call
+            function: (identifier)
+            arguments: (argument_list
+              (arrow_expression
+                parameter: (identifier)
+                body: (binary_expression
+                  left: (member_expression
+                    object: (identifier)
+                    property: (identifier))
+                  right: (number_literal))))))
+        right: (function_call
+          function: (identifier)
+          arguments: (argument_list
+            (arrow_expression
+              parameter: (identifier)
+              body: (member_expression
+                object: (identifier)
+                property: (identifier))))))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (number_literal))))))
+
+================================================================================
+Integration - Nested Member Access In Record
+================================================================================
+{
+  name: $user.profile.name,
+  email: $user.contact.email,
+  active: $user.status.active
+}
+---
+(program
+  (expression_statement
+    (record_literal
+      (property
+        key: (identifier)
+        value: (member_expression
+          object: (member_expression
+            object: (variable_reference (identifier))
+            property: (identifier))
+          property: (identifier)))
+      (property
+        key: (identifier)
+        value: (member_expression
+          object: (member_expression
+            object: (variable_reference (identifier))
+            property: (identifier))
+          property: (identifier)))
+      (property
+        key: (identifier)
+        value: (member_expression
+          object: (member_expression
+            object: (variable_reference (identifier))
+            property: (identifier))
+          property: (identifier))))))
+
+================================================================================
+Integration - Method Chain With Arrow Functions
+================================================================================
+$data
+  .filter(x => x.active)
+  .map(x => x.value * 2)
+  .reduce(sum => sum + 1)
+---
+(program
+  (expression_statement
+    (function_call
+      function: (member_expression
+        object: (function_call
+          function: (member_expression
+            object: (function_call
+              function: (member_expression
+                object: (variable_reference (identifier))
+                property: (identifier))
+              arguments: (argument_list
+                (arrow_expression
+                  parameter: (identifier)
+                  body: (member_expression
+                    object: (identifier)
+                    property: (identifier)))))
+            property: (identifier))
+          arguments: (argument_list
+            (arrow_expression
+              parameter: (identifier)
+              body: (binary_expression
+                left: (member_expression
+                  object: (identifier)
+                  property: (identifier))
+                right: (number_literal)))))
+        property: (identifier))
+      arguments: (argument_list
+        (arrow_expression
+          parameter: (identifier)
+          body: (binary_expression
+            left: (identifier)
+            right: (number_literal)))))))

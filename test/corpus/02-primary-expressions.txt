@@ -495,22 +495,21 @@ Mixed - Parenthesized Record
 ================================================================================
 Mixed - All Primary Expressions
 ================================================================================
+(10)
 42
 "hello"
 true
 null
-$x
-(10)
 [1, 2, 3]
 {name: "Alice"}
+1 + $x
 ---
 (program
+  (expression_statement (parenthesized_expression (number_literal)))
   (expression_statement (number_literal))
   (expression_statement (string_literal))
   (expression_statement (boolean_literal))
   (expression_statement (null_literal))
-  (expression_statement (variable_reference (identifier)))
-  (expression_statement (parenthesized_expression (number_literal)))
   (expression_statement
     (list_literal
       (number_literal)
@@ -520,4 +519,8 @@ $x
     (record_literal
       (property
         key: (identifier)
-        value: (string_literal)))))
+        value: (string_literal))))
+  (expression_statement
+    (binary_expression
+      left: (number_literal)
+      right: (variable_reference (identifier)))))

@@ -128,8 +128,9 @@ core.where()
 (program
   (expression_statement
     (function_call
-      function: (identifier)
-      function: (identifier)
+      function: (member_expression
+        object: (identifier)
+        property: (identifier))
       arguments: (argument_list))))
 
 ================================================================================
@@ -196,8 +197,9 @@ http.get("url", timeout=30, retry=true)
 (program
   (expression_statement
     (function_call
-      function: (identifier)
-      function: (identifier)
+      function: (member_expression
+        object: (identifier)
+        property: (identifier))
       arguments: (argument_list
         (string_literal)
         (keyword_argument
@@ -258,9 +260,11 @@ http.client.get("url")
 (program
   (expression_statement
     (function_call
-      function: (identifier)
-      function: (identifier)
-      function: (identifier)
+      function: (member_expression
+        object: (member_expression
+          object: (identifier)
+          property: (identifier))
+        property: (identifier))
       arguments: (argument_list (string_literal)))))
 
 ================================================================================
@@ -347,8 +351,9 @@ not http.get("api", timeout=30) == null
     (logical_not_expression
       operand: (binary_expression
         left: (function_call
-          function: (identifier)
-          function: (identifier)
+          function: (member_expression
+            object: (identifier)
+            property: (identifier))
           arguments: (argument_list
             (string_literal)
             (keyword_argument

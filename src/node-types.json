@@ -8,6 +8,10 @@
       "required": false,
       "types": [
         {
+          "type": "arrow_expression",
+          "named": true
+        },
+        {
           "type": "binary_expression",
           "named": true
         },
@@ -17,6 +21,10 @@
         },
         {
           "type": "boolean_literal",
+          "named": true
+        },
+        {
+          "type": "fstring_literal",
           "named": true
         },
         {
@@ -44,6 +52,10 @@
           "named": true
         },
         {
+          "type": "member_expression",
+          "named": true
+        },
+        {
           "type": "null_literal",
           "named": true
         },
@@ -53,6 +65,10 @@
         },
         {
           "type": "parenthesized_expression",
+          "named": true
+        },
+        {
+          "type": "pipe_expression",
           "named": true
         },
         {
@@ -75,13 +91,17 @@
     }
   },
   {
-    "type": "binary_expression",
+    "type": "arrow_expression",
     "named": true,
     "fields": {
-      "left": {
+      "body": {
         "multiple": false,
         "required": true,
         "types": [
+          {
+            "type": "arrow_expression",
+            "named": true
+          },
           {
             "type": "binary_expression",
             "named": true
@@ -92,6 +112,10 @@
           },
           {
             "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
             "named": true
           },
           {
@@ -115,6 +139,10 @@
             "named": true
           },
           {
+            "type": "member_expression",
+            "named": true
+          },
+          {
             "type": "null_literal",
             "named": true
           },
@@ -124,6 +152,108 @@
           },
           {
             "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "pipe_expression",
+            "named": true
+          },
+          {
+            "type": "record_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          },
+          {
+            "type": "variable_reference",
+            "named": true
+          }
+        ]
+      },
+      "parameter": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "binary_expression",
+    "named": true,
+    "fields": {
+      "left": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "arrow_expression",
+            "named": true
+          },
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
+            "type": "block",
+            "named": true
+          },
+          {
+            "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
+            "named": true
+          },
+          {
+            "type": "function_call",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
+            "named": true
+          },
+          {
+            "type": "list_literal",
+            "named": true
+          },
+          {
+            "type": "logical_not_expression",
+            "named": true
+          },
+          {
+            "type": "member_expression",
+            "named": true
+          },
+          {
+            "type": "null_literal",
+            "named": true
+          },
+          {
+            "type": "number_literal",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "pipe_expression",
             "named": true
           },
           {
@@ -207,6 +337,10 @@
         "required": true,
         "types": [
           {
+            "type": "arrow_expression",
+            "named": true
+          },
+          {
             "type": "binary_expression",
             "named": true
           },
@@ -216,6 +350,10 @@
           },
           {
             "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
             "named": true
           },
           {
@@ -239,6 +377,10 @@
             "named": true
           },
           {
+            "type": "member_expression",
+            "named": true
+          },
+          {
             "type": "null_literal",
             "named": true
           },
@@ -248,6 +390,10 @@
           },
           {
             "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "pipe_expression",
             "named": true
           },
           {
@@ -279,6 +425,10 @@
         "required": false,
         "types": [
           {
+            "type": "arrow_expression",
+            "named": true
+          },
+          {
             "type": "binary_expression",
             "named": true
           },
@@ -288,6 +438,10 @@
           },
           {
             "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
             "named": true
           },
           {
@@ -311,6 +465,10 @@
             "named": true
           },
           {
+            "type": "member_expression",
+            "named": true
+          },
+          {
             "type": "null_literal",
             "named": true
           },
@@ -320,6 +478,10 @@
           },
           {
             "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "pipe_expression",
             "named": true
           },
           {
@@ -358,6 +520,104 @@
     "fields": {}
   },
   {
+    "type": "connect_statement",
+    "named": true,
+    "fields": {
+      "alias": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "string_literal",
+            "named": true
+          }
+        ]
+      },
+      "source": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "arrow_expression",
+            "named": true
+          },
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
+            "type": "block",
+            "named": true
+          },
+          {
+            "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
+            "named": true
+          },
+          {
+            "type": "function_call",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
+            "named": true
+          },
+          {
+            "type": "list_literal",
+            "named": true
+          },
+          {
+            "type": "logical_not_expression",
+            "named": true
+          },
+          {
+            "type": "member_expression",
+            "named": true
+          },
+          {
+            "type": "null_literal",
+            "named": true
+          },
+          {
+            "type": "number_literal",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "pipe_expression",
+            "named": true
+          },
+          {
+            "type": "record_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          },
+          {
+            "type": "variable_reference",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "expression_statement",
     "named": true,
     "fields": {},
@@ -365,6 +625,10 @@
       "multiple": false,
       "required": true,
       "types": [
+        {
+          "type": "arrow_expression",
+          "named": true
+        },
         {
           "type": "binary_expression",
           "named": true
@@ -375,6 +639,10 @@
         },
         {
           "type": "boolean_literal",
+          "named": true
+        },
+        {
+          "type": "fstring_literal",
           "named": true
         },
         {
@@ -398,6 +666,10 @@
           "named": true
         },
         {
+          "type": "member_expression",
+          "named": true
+        },
+        {
           "type": "null_literal",
           "named": true
         },
@@ -407,6 +679,10 @@
         },
         {
           "type": "parenthesized_expression",
+          "named": true
+        },
+        {
+          "type": "pipe_expression",
           "named": true
         },
         {
@@ -429,6 +705,113 @@
     }
   },
   {
+    "type": "fstring_interpolation",
+    "named": true,
+    "fields": {
+      "expression": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "arrow_expression",
+            "named": true
+          },
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
+            "type": "block",
+            "named": true
+          },
+          {
+            "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
+            "named": true
+          },
+          {
+            "type": "function_call",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
+            "named": true
+          },
+          {
+            "type": "list_literal",
+            "named": true
+          },
+          {
+            "type": "logical_not_expression",
+            "named": true
+          },
+          {
+            "type": "member_expression",
+            "named": true
+          },
+          {
+            "type": "null_literal",
+            "named": true
+          },
+          {
+            "type": "number_literal",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "pipe_expression",
+            "named": true
+          },
+          {
+            "type": "record_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          },
+          {
+            "type": "variable_reference",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "fstring_literal",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "fstring_interpolation",
+          "named": true
+        },
+        {
+          "type": "fstring_text",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "function_call",
     "named": true,
     "fields": {
@@ -443,15 +826,63 @@
         ]
       },
       "function": {
-        "multiple": true,
+        "multiple": false,
         "required": true,
         "types": [
           {
-            "type": ".",
-            "named": false
+            "type": "block",
+            "named": true
+          },
+          {
+            "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
+            "named": true
+          },
+          {
+            "type": "function_call",
+            "named": true
           },
           {
             "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
+            "named": true
+          },
+          {
+            "type": "list_literal",
+            "named": true
+          },
+          {
+            "type": "member_expression",
+            "named": true
+          },
+          {
+            "type": "null_literal",
+            "named": true
+          },
+          {
+            "type": "number_literal",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "record_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          },
+          {
+            "type": "variable_reference",
             "named": true
           }
         ]
@@ -513,6 +944,10 @@
         "required": true,
         "types": [
           {
+            "type": "arrow_expression",
+            "named": true
+          },
+          {
             "type": "binary_expression",
             "named": true
           },
@@ -522,6 +957,10 @@
           },
           {
             "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
             "named": true
           },
           {
@@ -545,6 +984,10 @@
             "named": true
           },
           {
+            "type": "member_expression",
+            "named": true
+          },
+          {
             "type": "null_literal",
             "named": true
           },
@@ -554,6 +997,10 @@
           },
           {
             "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "pipe_expression",
             "named": true
           },
           {
@@ -595,6 +1042,10 @@
         "required": true,
         "types": [
           {
+            "type": "arrow_expression",
+            "named": true
+          },
+          {
             "type": "binary_expression",
             "named": true
           },
@@ -604,6 +1055,10 @@
           },
           {
             "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
             "named": true
           },
           {
@@ -627,6 +1082,10 @@
             "named": true
           },
           {
+            "type": "member_expression",
+            "named": true
+          },
+          {
             "type": "null_literal",
             "named": true
           },
@@ -636,6 +1095,10 @@
           },
           {
             "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "pipe_expression",
             "named": true
           },
           {
@@ -667,6 +1130,10 @@
       "required": false,
       "types": [
         {
+          "type": "arrow_expression",
+          "named": true
+        },
+        {
           "type": "binary_expression",
           "named": true
         },
@@ -676,6 +1143,10 @@
         },
         {
           "type": "boolean_literal",
+          "named": true
+        },
+        {
+          "type": "fstring_literal",
           "named": true
         },
         {
@@ -699,6 +1170,10 @@
           "named": true
         },
         {
+          "type": "member_expression",
+          "named": true
+        },
+        {
           "type": "null_literal",
           "named": true
         },
@@ -708,6 +1183,10 @@
         },
         {
           "type": "parenthesized_expression",
+          "named": true
+        },
+        {
+          "type": "pipe_expression",
           "named": true
         },
         {
@@ -738,6 +1217,10 @@
         "required": true,
         "types": [
           {
+            "type": "arrow_expression",
+            "named": true
+          },
+          {
             "type": "binary_expression",
             "named": true
           },
@@ -747,6 +1230,10 @@
           },
           {
             "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
             "named": true
           },
           {
@@ -770,6 +1257,10 @@
             "named": true
           },
           {
+            "type": "member_expression",
+            "named": true
+          },
+          {
             "type": "null_literal",
             "named": true
           },
@@ -779,6 +1270,10 @@
           },
           {
             "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "pipe_expression",
             "named": true
           },
           {
@@ -802,6 +1297,84 @@
     }
   },
   {
+    "type": "member_expression",
+    "named": true,
+    "fields": {
+      "object": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "block",
+            "named": true
+          },
+          {
+            "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
+            "named": true
+          },
+          {
+            "type": "function_call",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
+            "named": true
+          },
+          {
+            "type": "list_literal",
+            "named": true
+          },
+          {
+            "type": "member_expression",
+            "named": true
+          },
+          {
+            "type": "null_literal",
+            "named": true
+          },
+          {
+            "type": "number_literal",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "record_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          },
+          {
+            "type": "variable_reference",
+            "named": true
+          }
+        ]
+      },
+      "property": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "parenthesized_expression",
     "named": true,
     "fields": {},
@@ -809,6 +1382,10 @@
       "multiple": false,
       "required": true,
       "types": [
+        {
+          "type": "arrow_expression",
+          "named": true
+        },
         {
           "type": "binary_expression",
           "named": true
@@ -819,6 +1396,10 @@
         },
         {
           "type": "boolean_literal",
+          "named": true
+        },
+        {
+          "type": "fstring_literal",
           "named": true
         },
         {
@@ -842,6 +1423,10 @@
           "named": true
         },
         {
+          "type": "member_expression",
+          "named": true
+        },
+        {
           "type": "null_literal",
           "named": true
         },
@@ -851,6 +1436,10 @@
         },
         {
           "type": "parenthesized_expression",
+          "named": true
+        },
+        {
+          "type": "pipe_expression",
           "named": true
         },
         {
@@ -873,6 +1462,176 @@
     }
   },
   {
+    "type": "pipe_expression",
+    "named": true,
+    "fields": {
+      "left": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "arrow_expression",
+            "named": true
+          },
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
+            "type": "block",
+            "named": true
+          },
+          {
+            "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
+            "named": true
+          },
+          {
+            "type": "function_call",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
+            "named": true
+          },
+          {
+            "type": "list_literal",
+            "named": true
+          },
+          {
+            "type": "logical_not_expression",
+            "named": true
+          },
+          {
+            "type": "member_expression",
+            "named": true
+          },
+          {
+            "type": "null_literal",
+            "named": true
+          },
+          {
+            "type": "number_literal",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "pipe_expression",
+            "named": true
+          },
+          {
+            "type": "record_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          },
+          {
+            "type": "variable_reference",
+            "named": true
+          }
+        ]
+      },
+      "right": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "arrow_expression",
+            "named": true
+          },
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
+            "type": "block",
+            "named": true
+          },
+          {
+            "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
+            "named": true
+          },
+          {
+            "type": "function_call",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
+            "named": true
+          },
+          {
+            "type": "list_literal",
+            "named": true
+          },
+          {
+            "type": "logical_not_expression",
+            "named": true
+          },
+          {
+            "type": "member_expression",
+            "named": true
+          },
+          {
+            "type": "null_literal",
+            "named": true
+          },
+          {
+            "type": "number_literal",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "pipe_expression",
+            "named": true
+          },
+          {
+            "type": "record_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          },
+          {
+            "type": "variable_reference",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "program",
     "named": true,
     "root": true,
@@ -881,6 +1640,10 @@
       "multiple": true,
       "required": false,
       "types": [
+        {
+          "type": "connect_statement",
+          "named": true
+        },
         {
           "type": "expression_statement",
           "named": true
@@ -915,6 +1678,10 @@
         "required": true,
         "types": [
           {
+            "type": "arrow_expression",
+            "named": true
+          },
+          {
             "type": "binary_expression",
             "named": true
           },
@@ -924,6 +1691,10 @@
           },
           {
             "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
             "named": true
           },
           {
@@ -947,6 +1718,10 @@
             "named": true
           },
           {
+            "type": "member_expression",
+            "named": true
+          },
+          {
             "type": "null_literal",
             "named": true
           },
@@ -956,6 +1731,10 @@
           },
           {
             "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "pipe_expression",
             "named": true
           },
           {
@@ -1002,6 +1781,10 @@
         "required": true,
         "types": [
           {
+            "type": "arrow_expression",
+            "named": true
+          },
+          {
             "type": "binary_expression",
             "named": true
           },
@@ -1011,6 +1794,10 @@
           },
           {
             "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "fstring_literal",
             "named": true
           },
           {
@@ -1034,6 +1821,10 @@
             "named": true
           },
           {
+            "type": "member_expression",
+            "named": true
+          },
+          {
             "type": "null_literal",
             "named": true
           },
@@ -1043,6 +1834,10 @@
           },
           {
             "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "pipe_expression",
             "named": true
           },
           {
@@ -1085,7 +1880,15 @@
     "named": false
   },
   {
+    "type": "\"",
+    "named": false
+  },
+  {
     "type": "$",
+    "named": false
+  },
+  {
+    "type": "$\"",
     "named": false
   },
   {
@@ -1145,6 +1948,10 @@
     "named": false
   },
   {
+    "type": "=>",
+    "named": false
+  },
+  {
     "type": ">",
     "named": false
   },
@@ -1165,9 +1972,17 @@
     "named": false
   },
   {
+    "type": "as",
+    "named": false
+  },
+  {
     "type": "comment",
     "named": true,
     "extra": true
+  },
+  {
+    "type": "connect",
+    "named": false
   },
   {
     "type": "else",
@@ -1176,6 +1991,10 @@
   {
     "type": "false",
     "named": false
+  },
+  {
+    "type": "fstring_text",
+    "named": true
   },
   {
     "type": "identifier",
@@ -1215,6 +2034,10 @@
   },
   {
     "type": "{",
+    "named": false
+  },
+  {
+    "type": "|",
     "named": false
   },
   {

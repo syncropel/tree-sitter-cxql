@@ -1,32 +1,26 @@
 module.exports = grammar({
   name: "cxql",
 
-  extras: ($) => [
-    /\s/, // Whitespace
-    $.comment,
-  ],
+  extras: ($) => [/\s/, $.comment],
 
   word: ($) => $.identifier,
 
-  // Explicitly declare the conflict between block and record_literal
-  // This allows the GLR parser to explore both possibilities for {}
   conflicts: ($) => [[$.block, $.record_literal]],
 
   rules: {
-    // === Program Structure ===
+    // ============================================================================
+    // Program Structure
+    // ============================================================================
+
     program: ($) => repeat($._statement),
 
-    // Phase 5: Expanded to include let statements
     _statement: ($) =>
       choice(
-        $.let_statement, // Phase 5: NEW
-        $.expression_statement // Existing
+        $.let_statement,
+        $.connect_statement, // NEW: Phase 8
+        $.expression_statement
       ),
 
-    expression_statement: ($) => $._expression,
-
-    // Phase 5: Let statement
-    // Syntax: let name = value
     let_statement: ($) =>
       seq(
         "let",
@@ -35,30 +29,57 @@ module.exports = grammar({
         field("value", $._expression)
       ),
 
-    // === Expressions (Precedence Climbing) ===
-    _expression: ($) =>
-      choice(
-        $.binary_expression, // Phase 3
-        $.unary_expression, // Phase 4: Arithmetic unary (-)
-        $.logical_not_expression, // Phase 4: Logical not
-        $._primary_expression // Phase 1, 2, 4, 5
+    // NEW: Phase 8 - Connect statement
+    connect_statement: ($) =>
+      seq(
+        "connect",
+        "(",
+        field("source", $._expression),
+        ",",
+        "as",
+        "=",
+        field("alias", $.string_literal),
+        ")"
       ),
 
-    // Phase 4: Arithmetic unary operator (-)
-    // Precedence 8: Higher than all binary operators
-    unary_expression: ($) =>
-      prec.right(8, seq("-", field("operand", $._expression))),
+    expression_statement: ($) => $._expression,
 
-    // Phase 4: Logical not operator
-    // Precedence 3: Between equality (4) and logical AND (2)
-    // Lower than comparison, so "not x > 10" parses as "not (x > 10)"
-    logical_not_expression: ($) =>
-      prec.right(3, seq("not", field("operand", $._expression))),
+    // ============================================================================
+    // Expressions
+    // ============================================================================
 
-    // Phase 3: Binary operators
+    _expression: ($) =>
+      choice(
+        $.pipe_expression,
+        $.arrow_expression,
+        $.binary_expression,
+        $.unary_expression,
+        $.logical_not_expression,
+        $._primary_expression
+      ),
+
+    // Pipe operator (Level 6 - same as addition)
+    pipe_expression: ($) =>
+      prec.left(
+        6,
+        seq(field("left", $._expression), "|", field("right", $._expression))
+      ),
+
+    // Arrow functions (Level 0 - lowest precedence, right associative)
+    arrow_expression: ($) =>
+      prec.right(
+        0,
+        seq(
+          field("parameter", $.identifier),
+          "=>",
+          field("body", $._expression)
+        )
+      ),
+
+    // Binary expressions with precedence levels
     binary_expression: ($) =>
       choice(
-        // Level 7 (highest): Multiplicative
+        // Level 7: Multiplicative (highest)
         prec.left(
           7,
           seq(
@@ -103,7 +124,7 @@ module.exports = grammar({
             field("right", $._expression)
           )
         ),
-        // Level 1 (lowest): Logical OR
+        // Level 1: Logical OR (lowest)
         prec.left(
           1,
           seq(
@@ -114,15 +135,28 @@ module.exports = grammar({
         )
       ),
 
-    // Phase 2: Primary expressions (HIDDEN)
+    // Unary minus (Level 8 - higher than multiplication)
+    unary_expression: ($) =>
+      prec.right(8, seq("-", field("operand", $._expression))),
+
+    // Logical NOT (Level 3 - between equality and AND)
+    logical_not_expression: ($) =>
+      prec.right(3, seq("not", field("operand", $._expression))),
+
+    // ============================================================================
+    // Primary Expressions
+    // ============================================================================
+
     _primary_expression: ($) =>
       choice(
-        $.function_call, // Phase 4: Check function call BEFORE identifier
+        $.member_expression,
+        $.function_call,
         $.parenthesized_expression,
         $.list_literal,
-        $.record_literal, // Phase 2: Record literal (for {key: value})
-        $.block, // Phase 5: Block expression (for {statements; expr})
-        $.if_expression, // Phase 5: If expression
+        $.record_literal,
+        $.block,
+        $.if_expression,
+        $.fstring_literal, // NEW: Phase 8
         $.identifier,
         $.number_literal,
         $.string_literal,
@@ -131,84 +165,61 @@ module.exports = grammar({
         $.variable_reference
       ),
 
-    // Phase 5: Block expression
-    // A block contains let statements and/or a final expression
-    // Syntax: { let x = 1  let y = 2  x + y }
-    block: ($) => seq("{", optional($._block_body), "}"),
-
-    // Block body distinguishes statements from final expression
-    _block_body: ($) =>
-      choice(
-        // Just let statements (no final expression)
-        repeat1($.let_statement),
-        // Let statements followed by final expression
-        seq(repeat1($.let_statement), field("result", $._expression)),
-        // Just a final expression (no statements)
-        field("result", $._expression)
+    // Member access (Level 10 - highest precedence)
+    member_expression: ($) =>
+      prec(
+        10,
+        seq(
+          field("object", $._primary_expression),
+          ".",
+          field("property", $.identifier)
+        )
       ),
 
-    // Phase 5: If expression
-    // Syntax: if { condition } { consequent } else { alternative }
-    if_expression: ($) =>
-      seq(
-        "if",
-        field("condition", $.block),
-        field("consequent", $.block),
-        optional(seq("else", field("alternative", $.block)))
-      ),
-
-    // Phase 4: Function call
+    // Function call (Level 9)
     function_call: ($) =>
       prec(
         9,
         seq(
-          field("function", sep1($.identifier, ".")),
+          field("function", $._primary_expression),
           field("arguments", $.argument_list)
         )
       ),
 
-    // Phase 4: Argument list
     argument_list: ($) =>
       seq(
         "(",
         optional(
           seq(
-            choice($.keyword_argument, $._expression),
-            repeat(seq(",", choice($.keyword_argument, $._expression))),
-            optional(",") // Trailing comma
+            choice($._expression, $.keyword_argument),
+            repeat(seq(",", choice($._expression, $.keyword_argument))),
+            optional(",")
           )
         ),
         ")"
       ),
 
-    // Phase 4: Keyword argument (name=value)
     keyword_argument: ($) =>
       seq(field("name", $.identifier), "=", field("value", $._expression)),
 
-    // Phase 2: Parenthesized expression
     parenthesized_expression: ($) => seq("(", $._expression, ")"),
 
-    // Phase 2: List literal
+    // ============================================================================
+    // Composite Literals
+    // ============================================================================
+
     list_literal: ($) =>
       seq(
         "[",
         optional(
-          seq(
-            $._expression,
-            repeat(seq(",", $._expression)),
-            optional(",") // Trailing comma
-          )
+          seq($._expression, repeat(seq(",", $._expression)), optional(","))
         ),
         "]"
       ),
 
-    // Phase 2: Record literal
-    // Syntax: {key: value, key2: value2}
-    // Distinguished from block by presence of colons
-    // Dynamic precedence: prefer record_literal over block when ambiguous (e.g., {})
     record_literal: ($) =>
       prec.dynamic(
-        1, // CHANGED: Dynamic precedence to prefer over block in conflicts
+        1,
         seq(
           "{",
           optional(
@@ -218,7 +229,6 @@ module.exports = grammar({
         )
       ),
 
-    // Phase 2: Property (key: value)
     property: ($) =>
       seq(
         field("key", choice($.identifier, $.string_literal)),
@@ -226,9 +236,44 @@ module.exports = grammar({
         field("value", $._expression)
       ),
 
-    // === Literals (Phase 1) ===
+    // ============================================================================
+    // Control Flow
+    // ============================================================================
 
-    identifier: ($) => token(seq(/[a-zA-Z]/, repeat(/[a-zA-Z0-9_-]/))),
+    block: ($) => seq("{", optional($._block_body), "}"),
+
+    _block_body: ($) =>
+      choice(
+        repeat1($.let_statement),
+        seq(repeat1($.let_statement), field("result", $._expression)),
+        field("result", $._expression)
+      ),
+
+    if_expression: ($) =>
+      seq(
+        "if",
+        field("condition", $.block),
+        field("consequent", $.block),
+        optional(seq("else", field("alternative", $.block)))
+      ),
+
+    // ============================================================================
+    // NEW: Phase 8 - F-String Literals
+    // ============================================================================
+
+    fstring_literal: ($) =>
+      seq('$"', repeat(choice($.fstring_text, $.fstring_interpolation)), '"'),
+
+    fstring_text: ($) => token.immediate(prec(1, /[^{"]+/)),
+
+    fstring_interpolation: ($) =>
+      seq("{", field("expression", $._expression), "}"),
+
+    // ============================================================================
+    // Simple Literals
+    // ============================================================================
+
+    identifier: ($) => /[a-zA-Z][a-zA-Z0-9_-]*/,
 
     number_literal: ($) => {
       const decimal = /[0-9]+/;
@@ -251,12 +296,10 @@ module.exports = grammar({
 
     variable_reference: ($) => seq("$", $.identifier),
 
-    // === Comments (Phase 1) ===
+    // ============================================================================
+    // Comments
+    // ============================================================================
+
     comment: ($) => token(seq("#", /.*/)),
   },
 });
-
-// Helper function: sep1 (one or more with separator)
-function sep1(rule, separator) {
-  return seq(rule, repeat(seq(separator, rule)));
-}
