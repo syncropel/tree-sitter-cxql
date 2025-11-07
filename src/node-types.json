@@ -12,6 +12,10 @@
           "named": true
         },
         {
+          "type": "block",
+          "named": true
+        },
+        {
           "type": "boolean_literal",
           "named": true
         },
@@ -21,6 +25,10 @@
         },
         {
           "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "if_expression",
           "named": true
         },
         {
@@ -79,6 +87,10 @@
             "named": true
           },
           {
+            "type": "block",
+            "named": true
+          },
+          {
             "type": "boolean_literal",
             "named": true
           },
@@ -88,6 +100,10 @@
           },
           {
             "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
             "named": true
           },
           {
@@ -195,6 +211,10 @@
             "named": true
           },
           {
+            "type": "block",
+            "named": true
+          },
+          {
             "type": "boolean_literal",
             "named": true
           },
@@ -204,6 +224,10 @@
           },
           {
             "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
             "named": true
           },
           {
@@ -247,6 +271,88 @@
     }
   },
   {
+    "type": "block",
+    "named": true,
+    "fields": {
+      "result": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
+            "type": "block",
+            "named": true
+          },
+          {
+            "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "function_call",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
+            "named": true
+          },
+          {
+            "type": "list_literal",
+            "named": true
+          },
+          {
+            "type": "logical_not_expression",
+            "named": true
+          },
+          {
+            "type": "null_literal",
+            "named": true
+          },
+          {
+            "type": "number_literal",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "record_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          },
+          {
+            "type": "variable_reference",
+            "named": true
+          }
+        ]
+      }
+    },
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "let_statement",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "boolean_literal",
     "named": true,
     "fields": {}
@@ -264,6 +370,10 @@
           "named": true
         },
         {
+          "type": "block",
+          "named": true
+        },
+        {
           "type": "boolean_literal",
           "named": true
         },
@@ -273,6 +383,10 @@
         },
         {
           "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "if_expression",
           "named": true
         },
         {
@@ -345,6 +459,42 @@
     }
   },
   {
+    "type": "if_expression",
+    "named": true,
+    "fields": {
+      "alternative": {
+        "multiple": false,
+        "required": false,
+        "types": [
+          {
+            "type": "block",
+            "named": true
+          }
+        ]
+      },
+      "condition": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "block",
+            "named": true
+          }
+        ]
+      },
+      "consequent": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "block",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
     "type": "keyword_argument",
     "named": true,
     "fields": {
@@ -367,6 +517,10 @@
             "named": true
           },
           {
+            "type": "block",
+            "named": true
+          },
+          {
             "type": "boolean_literal",
             "named": true
           },
@@ -376,6 +530,92 @@
           },
           {
             "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
+            "named": true
+          },
+          {
+            "type": "list_literal",
+            "named": true
+          },
+          {
+            "type": "logical_not_expression",
+            "named": true
+          },
+          {
+            "type": "null_literal",
+            "named": true
+          },
+          {
+            "type": "number_literal",
+            "named": true
+          },
+          {
+            "type": "parenthesized_expression",
+            "named": true
+          },
+          {
+            "type": "record_literal",
+            "named": true
+          },
+          {
+            "type": "string_literal",
+            "named": true
+          },
+          {
+            "type": "unary_expression",
+            "named": true
+          },
+          {
+            "type": "variable_reference",
+            "named": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "type": "let_statement",
+    "named": true,
+    "fields": {
+      "name": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "identifier",
+            "named": true
+          }
+        ]
+      },
+      "value": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "binary_expression",
+            "named": true
+          },
+          {
+            "type": "block",
+            "named": true
+          },
+          {
+            "type": "boolean_literal",
+            "named": true
+          },
+          {
+            "type": "function_call",
+            "named": true
+          },
+          {
+            "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
             "named": true
           },
           {
@@ -431,6 +671,10 @@
           "named": true
         },
         {
+          "type": "block",
+          "named": true
+        },
+        {
           "type": "boolean_literal",
           "named": true
         },
@@ -440,6 +684,10 @@
         },
         {
           "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "if_expression",
           "named": true
         },
         {
@@ -494,6 +742,10 @@
             "named": true
           },
           {
+            "type": "block",
+            "named": true
+          },
+          {
             "type": "boolean_literal",
             "named": true
           },
@@ -503,6 +755,10 @@
           },
           {
             "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
             "named": true
           },
           {
@@ -558,6 +814,10 @@
           "named": true
         },
         {
+          "type": "block",
+          "named": true
+        },
+        {
           "type": "boolean_literal",
           "named": true
         },
@@ -567,6 +827,10 @@
         },
         {
           "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "if_expression",
           "named": true
         },
         {
@@ -620,6 +884,10 @@
         {
           "type": "expression_statement",
           "named": true
+        },
+        {
+          "type": "let_statement",
+          "named": true
         }
       ]
     }
@@ -651,6 +919,10 @@
             "named": true
           },
           {
+            "type": "block",
+            "named": true
+          },
+          {
             "type": "boolean_literal",
             "named": true
           },
@@ -660,6 +932,10 @@
           },
           {
             "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
             "named": true
           },
           {
@@ -730,6 +1006,10 @@
             "named": true
           },
           {
+            "type": "block",
+            "named": true
+          },
+          {
             "type": "boolean_literal",
             "named": true
           },
@@ -739,6 +1019,10 @@
           },
           {
             "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "if_expression",
             "named": true
           },
           {
@@ -886,12 +1170,24 @@
     "extra": true
   },
   {
+    "type": "else",
+    "named": false
+  },
+  {
     "type": "false",
     "named": false
   },
   {
     "type": "identifier",
     "named": true
+  },
+  {
+    "type": "if",
+    "named": false
+  },
+  {
+    "type": "let",
+    "named": false
   },
   {
     "type": "not",

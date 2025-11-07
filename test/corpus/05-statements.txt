@@ -1,0 +1,368 @@
+================================================================================
+Let - Simple Assignment
+================================================================================
+let x = 10
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (number_literal)))
+
+================================================================================
+Let - Expression Value
+================================================================================
+let y = 2 + 3
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (binary_expression
+      left: (number_literal)
+      right: (number_literal))))
+
+================================================================================
+Let - Function Call Value
+================================================================================
+let data = get("file")
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (string_literal)))))
+
+================================================================================
+Let - Multiple Statements
+================================================================================
+let x = 10
+let y = 20
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (number_literal))
+  (let_statement
+    name: (identifier)
+    value: (number_literal)))
+
+================================================================================
+Let - With Variable Reference
+================================================================================
+let x = 5
+let z = $x + 10
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (number_literal))
+  (let_statement
+    name: (identifier)
+    value: (binary_expression
+      left: (variable_reference
+        (identifier))
+      right: (number_literal))))
+
+================================================================================
+Block - Empty
+================================================================================
+{
+  42
+}
+---
+(program
+  (expression_statement
+    (block
+      result: (number_literal))))
+
+================================================================================
+Block - Single Expression
+================================================================================
+{42}
+---
+(program
+  (expression_statement
+    (block
+      result: (number_literal))))
+
+================================================================================
+Block - Statements Only
+================================================================================
+{
+  let x = 10
+  let y = 20
+}
+---
+(program
+  (expression_statement
+    (block
+      (let_statement
+        name: (identifier)
+        value: (number_literal))
+      (let_statement
+        name: (identifier)
+        value: (number_literal)))))
+
+================================================================================
+Block - With Final Expression
+================================================================================
+{
+  let x = 10
+  $x + 5
+}
+---
+(program
+  (expression_statement
+    (block
+      (let_statement
+        name: (identifier)
+        value: (number_literal))
+      result: (binary_expression
+        left: (variable_reference
+          (identifier))
+        right: (number_literal)))))
+
+================================================================================
+Block - Nested
+================================================================================
+{{1}}
+---
+(program
+  (expression_statement
+    (block
+      result: (block
+        result: (number_literal)))))
+
+================================================================================
+If - Simple With Else
+================================================================================
+if {true} {1} else {2}
+---
+(program
+  (expression_statement
+    (if_expression
+      condition: (block
+        result: (boolean_literal))
+      consequent: (block
+        result: (number_literal))
+      alternative: (block
+        result: (number_literal)))))
+
+================================================================================
+If - With Comparison Condition
+================================================================================
+if {$x > 0} {"positive"} else {"negative"}
+---
+(program
+  (expression_statement
+    (if_expression
+      condition: (block
+        result: (binary_expression
+          left: (variable_reference
+            (identifier))
+          right: (number_literal)))
+      consequent: (block
+        result: (string_literal))
+      alternative: (block
+        result: (string_literal)))))
+
+================================================================================
+If - Without Else
+================================================================================
+if {$x > 0} {$x}
+---
+(program
+  (expression_statement
+    (if_expression
+      condition: (block
+        result: (binary_expression
+          left: (variable_reference
+            (identifier))
+          right: (number_literal)))
+      consequent: (block
+        result: (variable_reference
+          (identifier))))))
+
+================================================================================
+If - Nested
+================================================================================
+if {$x > 0} {
+  if {$x < 10} {"small"} else {"large"}
+} else {"negative"}
+---
+(program
+  (expression_statement
+    (if_expression
+      condition: (block
+        result: (binary_expression
+          left: (variable_reference
+            (identifier))
+          right: (number_literal)))
+      consequent: (block
+        result: (if_expression
+          condition: (block
+            result: (binary_expression
+              left: (variable_reference
+                (identifier))
+              right: (number_literal)))
+          consequent: (block
+            result: (string_literal))
+          alternative: (block
+            result: (string_literal))))
+      alternative: (block
+        result: (string_literal)))))
+
+================================================================================
+If - As Let Value
+================================================================================
+let sign = if {$x > 0} {1} else {-1}
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (if_expression
+      condition: (block
+        result: (binary_expression
+          left: (variable_reference
+            (identifier))
+          right: (number_literal)))
+      consequent: (block
+        result: (number_literal))
+      alternative: (block
+        result: (unary_expression
+          operand: (number_literal))))))
+
+================================================================================
+If - Complex Condition
+================================================================================
+if {$x > 10 and $y < 20} {true} else {false}
+---
+(program
+  (expression_statement
+    (if_expression
+      condition: (block
+        result: (binary_expression
+          left: (binary_expression
+            left: (variable_reference
+              (identifier))
+            right: (number_literal))
+          right: (binary_expression
+            left: (variable_reference
+              (identifier))
+            right: (number_literal))))
+      consequent: (block
+        result: (boolean_literal))
+      alternative: (block
+        result: (boolean_literal)))))
+
+================================================================================
+If - Blocks With Statements
+================================================================================
+if {true} {
+  let x = 1
+  $x
+} else {
+  0
+}
+---
+(program
+  (expression_statement
+    (if_expression
+      condition: (block
+        result: (boolean_literal))
+      consequent: (block
+        (let_statement
+          name: (identifier)
+          value: (number_literal))
+        result: (variable_reference
+          (identifier)))
+      alternative: (block
+        result: (number_literal)))))
+
+================================================================================
+Integration - Let With If
+================================================================================
+let result = if {$x} {1} else {0}
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (if_expression
+      condition: (block
+        result: (variable_reference
+          (identifier)))
+      consequent: (block
+        result: (number_literal))
+      alternative: (block
+        result: (number_literal)))))
+
+================================================================================
+Integration - Nested Blocks
+================================================================================
+{
+  let x = {
+    let y = 1
+    $y
+  }
+  $x
+}
+---
+(program
+  (expression_statement
+    (block
+      (let_statement
+        name: (identifier)
+        value: (block
+          (let_statement
+            name: (identifier)
+            value: (number_literal))
+          result: (variable_reference
+            (identifier))))
+      result: (variable_reference
+        (identifier)))))
+
+================================================================================
+Integration - Complex Expression
+================================================================================
+{
+  let base = 10
+  let multiplier = 2
+  let result = if {$base > 5} {
+    $base * $multiplier
+  } else {
+    $base
+  }
+  $result + 1
+}
+---
+(program
+  (expression_statement
+    (block
+      (let_statement
+        name: (identifier)
+        value: (number_literal))
+      (let_statement
+        name: (identifier)
+        value: (number_literal))
+      (let_statement
+        name: (identifier)
+        value: (if_expression
+          condition: (block
+            result: (binary_expression
+              left: (variable_reference
+                (identifier))
+              right: (number_literal)))
+          consequent: (block
+            result: (binary_expression
+              left: (variable_reference
+                (identifier))
+              right: (variable_reference
+                (identifier))))
+          alternative: (block
+            result: (variable_reference
+              (identifier)))))
+      result: (binary_expression
+        left: (variable_reference
+          (identifier))
+        right: (number_literal)))))

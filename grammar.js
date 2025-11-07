@@ -8,13 +8,32 @@ module.exports = grammar({
 
   word: ($) => $.identifier,
 
+  // Explicitly declare the conflict between block and record_literal
+  // This allows the GLR parser to explore both possibilities for {}
+  conflicts: ($) => [[$.block, $.record_literal]],
+
   rules: {
     // === Program Structure ===
     program: ($) => repeat($._statement),
 
-    _statement: ($) => $.expression_statement,
+    // Phase 5: Expanded to include let statements
+    _statement: ($) =>
+      choice(
+        $.let_statement, // Phase 5: NEW
+        $.expression_statement // Existing
+      ),
 
     expression_statement: ($) => $._expression,
+
+    // Phase 5: Let statement
+    // Syntax: let name = value
+    let_statement: ($) =>
+      seq(
+        "let",
+        field("name", $.identifier),
+        "=",
+        field("value", $._expression)
+      ),
 
     // === Expressions (Precedence Climbing) ===
     _expression: ($) =>
@@ -22,7 +41,7 @@ module.exports = grammar({
         $.binary_expression, // Phase 3
         $.unary_expression, // Phase 4: Arithmetic unary (-)
         $.logical_not_expression, // Phase 4: Logical not
-        $._primary_expression // Phase 1, 2, 4
+        $._primary_expression // Phase 1, 2, 4, 5
       ),
 
     // Phase 4: Arithmetic unary operator (-)
@@ -101,13 +120,41 @@ module.exports = grammar({
         $.function_call, // Phase 4: Check function call BEFORE identifier
         $.parenthesized_expression,
         $.list_literal,
-        $.record_literal,
+        $.record_literal, // Phase 2: Record literal (for {key: value})
+        $.block, // Phase 5: Block expression (for {statements; expr})
+        $.if_expression, // Phase 5: If expression
         $.identifier,
         $.number_literal,
         $.string_literal,
         $.boolean_literal,
         $.null_literal,
         $.variable_reference
+      ),
+
+    // Phase 5: Block expression
+    // A block contains let statements and/or a final expression
+    // Syntax: { let x = 1  let y = 2  x + y }
+    block: ($) => seq("{", optional($._block_body), "}"),
+
+    // Block body distinguishes statements from final expression
+    _block_body: ($) =>
+      choice(
+        // Just let statements (no final expression)
+        repeat1($.let_statement),
+        // Let statements followed by final expression
+        seq(repeat1($.let_statement), field("result", $._expression)),
+        // Just a final expression (no statements)
+        field("result", $._expression)
+      ),
+
+    // Phase 5: If expression
+    // Syntax: if { condition } { consequent } else { alternative }
+    if_expression: ($) =>
+      seq(
+        "if",
+        field("condition", $.block),
+        field("consequent", $.block),
+        optional(seq("else", field("alternative", $.block)))
       ),
 
     // Phase 4: Function call
@@ -156,13 +203,19 @@ module.exports = grammar({
       ),
 
     // Phase 2: Record literal
+    // Syntax: {key: value, key2: value2}
+    // Distinguished from block by presence of colons
+    // Dynamic precedence: prefer record_literal over block when ambiguous (e.g., {})
     record_literal: ($) =>
-      seq(
-        "{",
-        optional(
-          seq($.property, repeat(seq(",", $.property)), optional(",")) // Trailing comma
-        ),
-        "}"
+      prec.dynamic(
+        1, // CHANGED: Dynamic precedence to prefer over block in conflicts
+        seq(
+          "{",
+          optional(
+            seq($.property, repeat(seq(",", $.property)), optional(","))
+          ),
+          "}"
+        )
       ),
 
     // Phase 2: Property (key: value)
