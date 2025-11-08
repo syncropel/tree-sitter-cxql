@@ -1,0 +1,351 @@
+# Algorithmic Trading System with Strategy Execution
+
+connect({
+  blueprint: "community/alpaca@1.0",
+  secrets: {api_key: "trading_key", secret_key: "trading_secret"},
+  paper: true
+}, as="broker")
+
+connect({
+  blueprint: "community/alpha-vantage@1.0",
+  secrets: {api_key: "market_data_key"}
+}, as="market")
+
+connect({
+  blueprint: "community/finnhub@1.0",
+  secrets: {api_key: "news_key"}
+}, as="news")
+
+connect({
+  blueprint: "community/postgres@1.0",
+  host: "localhost",
+  database: "trading_bot",
+  secrets: {username: "trader", password: "db_pass"}
+}, as="db")
+
+let watchlist = ["AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA", "META", "NFLX"]
+
+let positions = $broker.get-positions()
+
+let account = $broker.get-account()
+
+let market_data = $watchlist
+  | map(symbol => {
+      let quote = $market.get-quote(symbol)
+      let bars = $market.get-bars(symbol, timeframe="1Day", limit=30)
+      let indicators = $market.get-indicators(symbol, indicators=["SMA", "RSI", "MACD"])
+      
+      {
+        symbol: symbol,
+        current_price: quote.price,
+        change_percent: quote.change_percent,
+        volume: quote.volume,
+        avg_volume: $bars | mean(b => b.volume),
+        sma_20: $indicators.SMA.20,
+        sma_50: $indicators.SMA.50,
+        rsi: $indicators.RSI,
+        macd: $indicators.MACD.value,
+        macd_signal: $indicators.MACD.signal,
+        bars: $bars
+      }
+    })
+
+let news_sentiment = $watchlist
+  | map(symbol => {
+      let news_items = $news.get-company-news(symbol, days=7)
+      let sentiment_score = $news_items | mean(n => n.sentiment_score)
+      
+      {
+        symbol: symbol,
+        news_count: $news_items | count,
+        avg_sentiment: $sentiment_score,
+        sentiment_label: if {$sentiment_score > 0.3} {
+          "positive"
+        } else if {$sentiment_score < -0.3} {
+          "negative"
+        } else {
+          "neutral"
+        }
+      }
+    })
+
+let momentum_strategy = stock => {
+  let sma_crossover = stock.sma_20 > stock.sma_50
+  let rsi_oversold = stock.rsi < 30
+  let rsi_overbought = stock.rsi > 70
+  let strong_volume = stock.volume > stock.avg_volume * 1.5
+  
+  {
+    symbol: stock.symbol,
+    signal: if {$sma_crossover and $rsi_oversold and $strong_volume} {
+      "strong_buy"
+    } else if {$sma_crossover and $rsi_oversold} {
+      "buy"
+    } else if {not $sma_crossover and $rsi_overbought} {
+      "sell"
+    } else {
+      "hold"
+    },
+    confidence: if {$sma_crossover and $rsi_oversold and $strong_volume} {
+      0.9
+    } else if {$sma_crossover and $rsi_oversold} {
+      0.7
+    } else {
+      0.4
+    },
+    reasons: [
+      if {$sma_crossover} {"SMA crossover detected"} else {null},
+      if {$rsi_oversold} {"RSI oversold"} else {null},
+      if {$rsi_overbought} {"RSI overbought"} else {null},
+      if {$strong_volume} {"Strong volume"} else {null}
+    ]
+  }
+}
+
+let mean_reversion_strategy = stock => {
+  let bars = stock.bars | order-by("timestamp", direction="desc") | limit(20)
+  let mean = $bars | mean(b => b.close)
+  let variance = $bars | mean(b => (b.close - $mean) * (b.close - $mean))
+  let std_dev = $variance
+  
+  let upper_band = $mean + (2 * $std_dev)
+  let lower_band = $mean - (2 * $std_dev)
+  let current = stock.current_price
+  
+  {
+    symbol: stock.symbol,
+    signal: if {$current < $lower_band} {
+      "buy"
+    } else if {$current > $upper_band} {
+      "sell"
+    } else {
+      "hold"
+    },
+    confidence: if {$current < $lower_band} {
+      ($lower_band - $current) / $lower_band
+    } else if {$current > $upper_band} {
+      ($current - $upper_band) / $upper_band
+    } else {
+      0.3
+    },
+    mean: $mean,
+    current: $current,
+    distance_from_mean: (($current - $mean) / $mean) * 100
+  }
+}
+
+let momentum_signals = $market_data | map($momentum_strategy)
+let reversion_signals = $market_data | map($mean_reversion_strategy)
+
+let combined_signals = $momentum_signals
+  | map(ms => {
+      let rs = $reversion_signals 
+        | where(r => r.symbol == ms.symbol) 
+        | first
+      let sent = $news_sentiment 
+        | where(s => s.symbol == ms.symbol) 
+        | first
+      
+      {
+        symbol: ms.symbol,
+        momentum: ms,
+        reversion: $rs,
+        sentiment: $sent,
+        combined_signal: if {ms.signal == "buy" and $rs.signal == "buy" and $sent.sentiment_label == "positive"} {
+          "strong_buy"
+        } else if {ms.signal == "buy" and ($rs.signal == "buy" or $sent.sentiment_label == "positive")} {
+          "buy"
+        } else if {ms.signal == "sell" and $rs.signal == "sell"} {
+          "strong_sell"
+        } else if {ms.signal == "sell"} {
+          "sell"
+        } else {
+          "hold"
+        },
+        confidence: (ms.confidence + $rs.confidence) / 2
+      }
+    })
+
+let max_position_pct = 10
+let max_risk_pct = 2
+let stop_loss_pct = 5
+let take_profit_pct = 15
+
+let risk_params = {
+  max_position_size: ($account.equity * $max_position_pct) / 100,
+  max_portfolio_risk: ($account.equity * $max_risk_pct) / 100,
+  stop_loss_percent: $stop_loss_pct / 100,
+  take_profit_percent: $take_profit_pct / 100,
+  max_open_positions: 5
+}
+
+let orders_to_place = $combined_signals
+  | where(s => s.combined_signal == "strong_buy" or s.combined_signal == "buy")
+  | where(s => s.confidence > 0.6)
+  | map(signal => {
+      let stock_data = $market_data 
+        | where(m => m.symbol == signal.symbol) 
+        | first
+      
+      let risk_amount = $risk_params.max_portfolio_risk
+      let stop_distance = stock_data.current_price * $risk_params.stop_loss_percent
+      let position_size = $risk_amount / $stop_distance
+      let max_shares = $risk_params.max_position_size / stock_data.current_price
+      let shares = if {$position_size > $max_shares} {$max_shares} else {$position_size}
+      let discount_factor = 995
+      let price_adjusted = (stock_data.current_price * $discount_factor) / 1000
+      
+      {
+        symbol: signal.symbol,
+        side: "buy",
+        qty: $shares,
+        type: "limit",
+        limit_price: $price_adjusted,
+        time_in_force: "day",
+        stop_loss: stock_data.current_price * (1 - $risk_params.stop_loss_percent),
+        take_profit: stock_data.current_price * (1 + $risk_params.take_profit_percent),
+        signal_confidence: signal.confidence,
+        strategy_reasons: signal.momentum.reasons
+      }
+    })
+  | limit($risk_params.max_open_positions - ($positions | count))
+
+let validated_orders = $orders_to_place
+  | where(o => o.qty * o.limit_price <= $risk_params.max_position_size)
+  | where(o => o.limit_price > 0)
+
+let order_results = if {$broker.is-market-open() and ($validated_orders | count) > 0} {
+  $validated_orders
+    | map(order => {
+        let main_order = $broker.place-order({
+          symbol: order.symbol,
+          qty: order.qty,
+          side: order.side,
+          type: order.type,
+          limit_price: order.limit_price,
+          time_in_force: order.time_in_force
+        })
+        
+        let bracket = if {$main_order.status == "accepted"} {
+          $broker.place-bracket-orders({
+            parent_order_id: $main_order.id,
+            stop_loss: order.stop_loss,
+            take_profit: order.take_profit
+          })
+        } else {
+          null
+        }
+        
+        {
+          symbol: order.symbol,
+          order_id: $main_order.id,
+          status: $main_order.status,
+          qty: order.qty,
+          limit_price: order.limit_price,
+          stop_loss: order.stop_loss,
+          take_profit: order.take_profit,
+          bracket_orders: $bracket
+        }
+      })
+} else {
+  []
+}
+
+let position_actions = $positions
+  | map(pos => {
+      let signal = $combined_signals 
+        | where(s => s.symbol == pos.symbol) 
+        | first
+      let current_pnl_percent = (pos.current_price - pos.avg_entry_price) / pos.avg_entry_price
+      let loss_threshold = -8
+      let profit_threshold = 20
+      
+      {
+        symbol: pos.symbol,
+        current_signal: $signal.combined_signal,
+        pnl_percent: $current_pnl_percent,
+        action: if {$signal.combined_signal == "strong_sell" or $signal.combined_signal == "sell"} {
+          "close_position"
+        } else if {$current_pnl_percent < ($loss_threshold / 100)} {
+          "stop_loss_triggered"
+        } else if {$current_pnl_percent > ($profit_threshold / 100)} {
+          "take_profit"
+        } else {
+          "hold"
+        },
+        confidence: $signal.confidence
+      }
+    })
+  | where(pa => pa.action != "hold")
+
+let closures = $position_actions
+  | map(pa => $broker.close-position(pa.symbol))
+
+$order_results
+  | map(o => $db.execute($"
+      INSERT INTO trading_log (
+        timestamp, symbol, action, qty, price, 
+        stop_loss, take_profit, strategy, confidence, order_id
+      ) VALUES (
+        NOW(), '{o.symbol}', 'buy', {o.qty}, {o.limit_price},
+        {o.stop_loss}, {o.take_profit}, 'momentum_mean_reversion', 
+        {o.confidence}, '{o.order_id}'
+      )
+    "))
+
+let portfolio_metrics = {
+  account_value: $account.equity,
+  buying_power: $account.buying_power,
+  cash: $account.cash,
+  positions_count: $positions | count,
+  day_pnl: $account.equity - $account.last_equity,
+  day_pnl_percent: (($account.equity - $account.last_equity) / $account.last_equity) * 100
+}
+
+let report = {
+  timestamp: "2024-11-07T12:00:00Z",
+  market_status: if {$broker.is-market-open()} {"open"} else {"closed"},
+  account: $portfolio_metrics,
+  analysis: {
+    stocks_analyzed: $market_data | count,
+    buy_signals: $combined_signals | where(s => s.combined_signal == "buy" or s.combined_signal == "strong_buy") | count,
+    sell_signals: $combined_signals | where(s => s.combined_signal == "sell" or s.combined_signal == "strong_sell") | count,
+    hold_signals: $combined_signals | where(s => s.combined_signal == "hold") | count
+  },
+  signals: $combined_signals,
+  actions: {
+    orders_placed: $order_results,
+    positions_closed: $closures,
+    total_orders: $order_results | count,
+    total_closures: $closures | count
+  },
+  positions: {
+    current: $positions,
+    monitored: $position_actions
+  },
+  risk_management: {
+    parameters: $risk_params,
+    current_exposure: $positions | sum(p => p.market_value),
+    exposure_percent: ($positions | sum(p => p.market_value)) / $account.equity * 100,
+    available_slots: $risk_params.max_open_positions - ($positions | count)
+  },
+  next_actions: [
+    if {($order_results | count) > 0} {
+      "Monitor filled orders and set alerts"
+    } else {
+      null
+    },
+    if {($position_actions | count) > 0} {
+      $"Review {$position_actions | count} positions for potential exit"
+    } else {
+      null
+    },
+    if {$portfolio_metrics.day_pnl_percent < -5} {
+      "Daily loss exceeds threshold"
+    } else {
+      null
+    }
+  ]
+}
+
+$report

@@ -508,6 +508,10 @@
       "required": false,
       "types": [
         {
+          "type": "expression_statement",
+          "named": true
+        },
+        {
           "type": "let_statement",
           "named": true
         }
@@ -1372,6 +1376,10 @@
         "types": [
           {
             "type": "identifier",
+            "named": true
+          },
+          {
+            "type": "number_literal",
             "named": true
           }
         ]

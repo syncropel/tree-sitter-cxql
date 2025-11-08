@@ -1,0 +1,236 @@
+# SQL Database ETL with Email JSON Attachment
+
+# Connect to SQL database
+connect({
+  blueprint: "community/mssql@1.0",
+  host: "sql-server.company.com",
+  database: "sales_db",
+  secrets: {username: "etl_user", password: "secure_pass"}
+}, as="db")
+
+# Connect to email service
+connect({
+  blueprint: "community/smtp@1.0",
+  host: "smtp.company.com",
+  port: 587,
+  secrets: {username: "reports@company.com", password: "email_pass"}
+}, as="email")
+
+# Extract data from multiple tables
+let customers = $db.query($"
+  SELECT 
+    c.customer_id,
+    c.customer_name,
+    c.email,
+    c.region,
+    c.customer_since
+  FROM customers c
+  WHERE c.active = 1
+  AND c.customer_since >= DATEADD(day, -90, GETDATE())
+")
+
+let orders = $db.query($"
+  SELECT 
+    o.order_id,
+    o.customer_id,
+    o.order_date,
+    o.total_amount,
+    o.status,
+    o.payment_method
+  FROM orders o
+  WHERE o.order_date >= DATEADD(day, -90, GETDATE())
+")
+
+let order_items = $db.query($"
+  SELECT 
+    oi.order_id,
+    oi.product_id,
+    oi.product_name,
+    oi.quantity,
+    oi.unit_price,
+    oi.discount_percent
+  FROM order_items oi
+  INNER JOIN orders o ON oi.order_id = o.order_id
+  WHERE o.order_date >= DATEADD(day, -90, GETDATE())
+")
+
+# Transform and enrich data
+let enriched_orders = $orders
+  | map(order => {
+      # Get customer info
+      let customer = $customers
+        | where(c => c.customer_id == order.customer_id)
+        | first
+      
+      # Get order items
+      let items = $order_items
+        | where(oi => oi.order_id == order.order_id)
+      
+      # Calculate order metrics
+      let items_total = $items | sum(i => i.quantity * i.unit_price)
+      let discount_total = $items | sum(i => (i.quantity * i.unit_price * i.discount_percent) / 100)
+      
+      {
+        order_id: order.order_id,
+        order_date: order.order_date,
+        status: order.status,
+        customer: {
+          id: customer.customer_id,
+          name: customer.customer_name,
+          email: customer.email,
+          region: customer.region,
+          tenure_days: 90
+        },
+        items: $items | map(i => {
+          product_id: i.product_id,
+          product_name: i.product_name,
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+          discount_percent: i.discount_percent,
+          line_total: i.quantity * i.unit_price * (1 - i.discount_percent / 100)
+        }),
+        financial: {
+          subtotal: $items_total,
+          discount: $discount_total,
+          total: order.total_amount,
+          payment_method: order.payment_method
+        }
+      }
+    })
+
+# Filter for high-value orders
+let high_value_orders = $enriched_orders
+  | where(o => o.financial.total > 1000)
+  | order-by("financial.total", direction="desc")
+
+# Calculate summary statistics
+let summary = {
+  report_period: "Last 90 Days",
+  generated_at: "2024-11-07T12:00:00Z",
+  metrics: {
+    total_customers: $customers | count,
+    total_orders: $orders | count,
+    total_revenue: $orders | sum(o => o.total_amount),
+    avg_order_value: $orders | mean(o => o.total_amount),
+    high_value_orders: $high_value_orders | count,
+    high_value_revenue: $high_value_orders | sum(o => o.financial.total)
+  },
+  by_region: $enriched_orders
+    | group-by("customer.region")
+    | map(g => {
+        region: g.key,
+        orders: g.items | count,
+        revenue: g.items | sum(o => o.financial.total),
+        customers: g.items 
+          | map(o => o.customer.id) 
+          | distinct 
+          | count
+      })
+    | order-by("revenue", direction="desc"),
+  by_payment_method: $enriched_orders
+    | group-by("financial.payment_method")
+    | map(g => {
+        method: g.key,
+        orders: g.items | count,
+        revenue: g.items | sum(o => o.financial.total)
+      }),
+  top_products: $enriched_orders
+    | map(o => o.items)
+    | map(items => items | map(i => {
+        product_name: i.product_name,
+        quantity: i.quantity,
+        revenue: i.line_total
+      }))
+    | group-by("product_name")
+    | map(g => {
+        product: g.key,
+        units_sold: g.items | sum(i => i.quantity),
+        revenue: g.items | sum(i => i.revenue)
+      })
+    | order-by("revenue", direction="desc")
+    | limit(10)
+}
+
+# Create JSON report
+let report_json = {
+  summary: $summary,
+  high_value_orders: $high_value_orders,
+  detailed_orders: $enriched_orders
+}
+
+# Write report to temporary file
+let report_file = fs.write-json("/tmp/sales_report.json", $report_json)
+
+# Create HTML email body
+let email_body = $"
+<html>
+<body>
+  <h2>Quarterly Sales Report</h2>
+  <p>Report Period: {$summary.report_period}</p>
+  <p>Generated: {$summary.generated_at}</p>
+  
+  <h3>Summary Metrics</h3>
+  <ul>
+    <li>Total Customers: {$summary.metrics.total_customers}</li>
+    <li>Total Orders: {$summary.metrics.total_orders}</li>
+    <li>Total Revenue: ${$summary.metrics.total_revenue}</li>
+    <li>Average Order Value: ${$summary.metrics.avg_order_value}</li>
+    <li>High Value Orders (>$1000): {$summary.metrics.high_value_orders}</li>
+  </ul>
+  
+  <h3>Regional Performance</h3>
+  <table border='1' style='border-collapse: collapse;'>
+    <tr>
+      <th>Region</th>
+      <th>Orders</th>
+      <th>Revenue</th>
+      <th>Customers</th>
+    </tr>
+    {$summary.by_region | map(r => $"
+      <tr>
+        <td>{r.region}</td>
+        <td>{r.orders}</td>
+        <td>${r.revenue}</td>
+        <td>{r.customers}</td>
+      </tr>
+    ") | join("")}
+  </table>
+  
+  <p>Full detailed report attached as JSON.</p>
+  
+  <p>Best regards,<br/>Automated Reporting System</p>
+</body>
+</html>
+"
+
+# Send email with attachment
+$email.send({
+  from: "reports@company.com",
+  to: ["sales-team@company.com", "management@company.com"],
+  cc: ["analytics@company.com"],
+  subject: $"Quarterly Sales Report - {$summary.report_period}",
+  body: $email_body,
+  body_type: "html",
+  attachments: [
+    {
+      filename: "sales_report.json",
+      path: "/tmp/sales_report.json",
+      content_type: "application/json"
+    }
+  ]
+})
+
+# Log to database
+$db.execute($"
+  INSERT INTO report_log (report_type, report_date, records_processed, status)
+  VALUES ('quarterly_sales', GETDATE(), {$enriched_orders | count}, 'completed')
+")
+
+# Return confirmation
+{
+  status: "success",
+  report_generated: true,
+  email_sent: true,
+  records_processed: $enriched_orders | count,
+  summary: $summary.metrics
+}

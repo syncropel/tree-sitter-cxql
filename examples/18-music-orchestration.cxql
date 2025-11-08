@@ -1,0 +1,246 @@
+# Advanced Music Library Management and Recommendation System
+
+# Connect to music streaming service
+connect({
+  blueprint: "community/spotify@1.0",
+  secrets: {client_id: "spotify_id", client_secret: "spotify_secret", access_token: "user_token"}
+}, as="spotify")
+
+# Connect to recommendation AI service
+connect({
+  blueprint: "community/openai@1.0",
+  secrets: {api_key: "sk-..."}
+}, as="ai")
+
+# Connect to local database
+connect({
+  blueprint: "community/sqlite@1.0",
+  database: "/data/music_library.db"
+}, as="db")
+
+# Get currently playing track
+let now_playing = $spotify.get-current-playback()
+
+# Get user's listening history (last 50 tracks)
+let recent_tracks = $spotify.get-recently-played(limit=50)
+
+# Get user's top tracks (last 4 weeks)
+let top_tracks = $spotify.get-top-tracks(time_range="short_term", limit=50)
+
+# Get user's playlists
+let user_playlists = $spotify.get-user-playlists()
+
+# Analyze listening patterns
+let listening_analysis = {
+  # Time-based patterns
+  by_time_of_day: $recent_tracks
+    | map(t => {
+        hour: t.played_at_hour,
+        track: t.track.name,
+        energy: t.track.audio_features.energy,
+        valence: t.track.audio_features.valence
+      })
+    | group-by("hour")
+    | map(g => {
+        hour: g.key,
+        tracks_played: g.items | count,
+        avg_energy: g.items | mean(i => i.energy),
+        avg_valence: g.items | mean(i => i.valence)
+      })
+    | order-by("hour", direction="asc"),
+  
+  # Genre preferences
+  by_genre: $top_tracks
+    | map(t => t.artists | map(a => a.genres))
+    | group-by("genre")
+    | map(g => {
+        genre: g.key,
+        play_count: g.items | count,
+        percentage: (g.items | count * 100) / ($top_tracks | count)
+      })
+    | order-by("play_count", direction="desc")
+    | limit(10),
+  
+  # Audio features profile
+  audio_profile: {
+    avg_tempo: $top_tracks | mean(t => t.audio_features.tempo),
+    avg_energy: $top_tracks | mean(t => t.audio_features.energy),
+    avg_danceability: $top_tracks | mean(t => t.audio_features.danceability),
+    avg_valence: $top_tracks | mean(t => t.audio_features.valence),
+    avg_acousticness: $top_tracks | mean(t => t.audio_features.acousticness)
+  },
+  
+  # Mood classification
+  mood_distribution: {
+    happy: $top_tracks 
+      | where(t => t.audio_features.valence > 0.6 and t.audio_features.energy > 0.6) 
+      | count,
+    sad: $top_tracks 
+      | where(t => t.audio_features.valence < 0.4 and t.audio_features.energy < 0.4) 
+      | count,
+    energetic: $top_tracks 
+      | where(t => t.audio_features.energy > 0.7) 
+      | count,
+    calm: $top_tracks 
+      | where(t => t.audio_features.energy < 0.4 and t.audio_features.acousticness > 0.6) 
+      | count
+  }
+}
+
+# Get AI-powered recommendations based on listening history
+let ai_analysis = $ai.complete($"
+  Based on this user's music listening profile:
+  - Top genres: {$listening_analysis.by_genre | map(g => g.genre) | limit(5) | join(", ")}
+  - Audio profile: Energy {$listening_analysis.audio_profile.avg_energy}, Valence {$listening_analysis.audio_profile.avg_valence}
+  - Current track: {$now_playing.track.name} by {$now_playing.track.artists | first | map(a => a.name)}
+  
+  Suggest 5 specific artists or tracks they might enjoy and explain why.
+  Format as JSON with structure: {{"recommendations": [{{"name": "", "reason": ""}}]}}
+", max_tokens=500)
+
+# Get Spotify recommendations based on seed tracks
+let spotify_recs = $spotify.get-recommendations({
+  seed_tracks: $top_tracks | limit(5) | map(t => t.id),
+  target_energy: $listening_analysis.audio_profile.avg_energy,
+  target_valence: $listening_analysis.audio_profile.avg_valence,
+  limit: 20
+})
+
+# Create a smart playlist based on current mood and time
+let current_hour = now-playing.timestamp | extract-hour
+let current_mood = if {$now_playing.track.audio_features.valence > 0.6} {
+  "happy"
+} else if {$now_playing.track.audio_features.energy > 0.7} {
+  "energetic"
+} else {
+  "calm"
+}
+
+# Get tracks matching current mood from library
+let mood_tracks = $db.query($"
+  SELECT track_id, track_name, artist_name, energy, valence, danceability
+  FROM user_library
+  WHERE 
+    CASE 
+      WHEN '{$current_mood}' = 'happy' THEN valence > 0.6 AND energy > 0.5
+      WHEN '{$current_mood}' = 'energetic' THEN energy > 0.7
+      WHEN '{$current_mood}' = 'calm' THEN energy < 0.4 AND acousticness > 0.6
+      ELSE 1=1
+    END
+  AND track_id NOT IN (
+    SELECT track_id FROM recently_played WHERE played_at > datetime('now', '-7 days')
+  )
+  ORDER BY RANDOM()
+  LIMIT 30
+")
+
+# Create playlist
+let playlist_name = $"Smart Mix - {$current_mood} ({$current_hour}:00)"
+let new_playlist = $spotify.create-playlist({
+  name: $playlist_name,
+  description: $"Auto-generated playlist based on your listening patterns and current mood",
+  public: false
+})
+
+# Add tracks to playlist
+let track_ids = $mood_tracks | map(t => t.track_id)
+$spotify.add-tracks-to-playlist({
+  playlist_id: $new_playlist.id,
+  track_uris: $track_ids | map(id => $"spotify:track:{id}")
+})
+
+# Queue recommended tracks for playback
+let queue_tracks = $spotify_recs
+  | limit(10)
+  | map(rec => {
+      track_id: rec.id,
+      queued: $spotify.add-to-queue($"spotify:track:{rec.id}")
+    })
+
+# Store analysis in database
+$db.execute($"
+  INSERT INTO listening_sessions (
+    session_date, 
+    tracks_analyzed, 
+    dominant_genre, 
+    avg_energy, 
+    avg_valence,
+    mood_classification,
+    playlist_generated
+  ) VALUES (
+    datetime('now'),
+    {$recent_tracks | count},
+    '{$listening_analysis.by_genre | first | map(g => g.genre)}',
+    {$listening_analysis.audio_profile.avg_energy},
+    {$listening_analysis.audio_profile.avg_valence},
+    '{$current_mood}',
+    '{$new_playlist.id}'
+  )
+")
+
+# Update track play counts
+$recent_tracks
+  | map(t => $db.execute($"
+      INSERT INTO track_plays (track_id, played_at, context_type)
+      VALUES ('{t.track.id}', '{t.played_at}', '{t.context.type}')
+    "))
+
+# Create recommendation report
+{
+  now_playing: {
+    track: $now_playing.track.name,
+    artist: $now_playing.track.artists | first | map(a => a.name),
+    mood: $current_mood,
+    progress: $now_playing.progress_ms,
+    duration: $now_playing.track.duration_ms
+  },
+  
+  analysis: $listening_analysis,
+  
+  recommendations: {
+    ai_suggestions: $ai_analysis,
+    spotify_recs: $spotify_recs | map(r => {
+      name: r.name,
+      artists: r.artists | map(a => a.name) | join(", "),
+      match_score: r.match_score
+    }),
+    total_queued: $queue_tracks | count
+  },
+  
+  generated_playlist: {
+    id: $new_playlist.id,
+    name: $playlist_name,
+    url: $new_playlist.external_urls.spotify,
+    track_count: $mood_tracks | count
+  },
+  
+  insights: {
+    most_played_genre: $listening_analysis.by_genre | first | map(g => g.genre),
+    listening_peak_hour: $listening_analysis.by_time_of_day 
+      | order-by("tracks_played", direction="desc") 
+      | first 
+      | map(h => h.hour),
+    energy_preference: if {$listening_analysis.audio_profile.avg_energy > 0.6} {
+      "high energy"
+    } else if {$listening_analysis.audio_profile.avg_energy > 0.4} {
+      "moderate energy"
+    } else {
+      "low energy"
+    },
+    mood_tendency: $listening_analysis.mood_distribution
+      | map(m => if {m.happy > m.sad and m.happy > m.calm} {
+          "generally happy"
+        } else if {m.energetic > m.calm} {
+          "energetic"
+        } else {
+          "calm and relaxed"
+        })
+  },
+  
+  actions_taken: {
+    playlist_created: true,
+    tracks_queued: $queue_tracks | count,
+    database_updated: true,
+    analysis_stored: true
+  }
+}

@@ -1,0 +1,255 @@
+# Data Enrichment from Multiple Sources
+
+# Core customer data
+let customers = [
+  {id: 1, name: "Alice", email: "alice@example.com", signup_date: "2024-01-15"},
+  {id: 2, name: "Bob", email: "bob@example.com", signup_date: "2024-02-20"},
+  {id: 3, name: "Charlie", email: "charlie@example.com", signup_date: "2024-03-10"}
+]
+
+# Purchase history
+let purchases = [
+  {customer_id: 1, order_id: 101, date: "2024-10-01", amount: 250, product: "Widget"},
+  {customer_id: 1, order_id: 102, date: "2024-10-15", amount: 150, product: "Gadget"},
+  {customer_id: 2, order_id: 103, date: "2024-10-05", amount: 500, product: "Tool"},
+  {customer_id: 3, order_id: 104, date: "2024-10-20", amount: 75, product: "Widget"}
+]
+
+# Support tickets
+let support_tickets = [
+  {customer_id: 1, ticket_id: 501, date: "2024-10-16", status: "resolved", priority: "low"},
+  {customer_id: 2, ticket_id: 502, date: "2024-10-10", status: "open", priority: "high"},
+  {customer_id: 2, ticket_id: 503, date: "2024-10-25", status: "resolved", priority: "medium"}
+]
+
+# Product reviews
+let reviews = [
+  {customer_id: 1, product: "Widget", rating: 5, date: "2024-10-05"},
+  {customer_id: 1, product: "Gadget", rating: 4, date: "2024-10-18"},
+  {customer_id: 3, product: "Widget", rating: 3, date: "2024-10-22"}
+]
+
+# Email engagement
+let email_metrics = [
+  {customer_id: 1, campaign: "Oct Newsletter", opened: true, clicked: true},
+  {customer_id: 2, campaign: "Oct Newsletter", opened: true, clicked: false},
+  {customer_id: 3, campaign: "Oct Newsletter", opened: false, clicked: false}
+]
+
+# Enrich customers with all data sources
+let enriched_customers = $customers
+  | map(customer => {
+      # Get customer purchases
+      let cust_purchases = $purchases
+        | where(p => p.customer_id == customer.id)
+      
+      # Get customer tickets
+      let cust_tickets = $support_tickets
+        | where(t => t.customer_id == customer.id)
+      
+      # Get customer reviews
+      let cust_reviews = $reviews
+        | where(r => r.customer_id == customer.id)
+      
+      # Get email engagement
+      let cust_email = $email_metrics
+        | where(e => e.customer_id == customer.id)
+        | first
+      
+      {
+        customer_id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        signup_date: customer.signup_date,
+        
+        purchase_history: {
+          total_orders: $cust_purchases | count,
+          total_spent: $cust_purchases | sum(p => p.amount),
+          avg_order_value: if {($cust_purchases | count) > 0} {
+            $cust_purchases | mean(p => p.amount)
+          } else {
+            0
+          },
+          last_order_date: $cust_purchases
+            | order-by("date", direction="desc")
+            | limit(1)
+            | first
+            | map(p => p.date),
+          products_purchased: $cust_purchases
+            | map(p => p.product)
+            | distinct
+        },
+        
+        support_profile: {
+          total_tickets: $cust_tickets | count,
+          open_tickets: $cust_tickets
+            | where(t => t.status == "open")
+            | count,
+          resolved_tickets: $cust_tickets
+            | where(t => t.status == "resolved")
+            | count,
+          high_priority_tickets: $cust_tickets
+            | where(t => t.priority == "high")
+            | count,
+          has_active_issues: ($cust_tickets | where(t => t.status == "open") | count) > 0
+        },
+        
+        engagement: {
+          review_count: $cust_reviews | count,
+          avg_rating: if {($cust_reviews | count) > 0} {
+            $cust_reviews | mean(r => r.rating)
+          } else {
+            null
+          },
+          email_engagement: if {$cust_email == null} {
+            {opened: false, clicked: false, engaged: false}
+          } else {
+            {
+              opened: $cust_email.opened,
+              clicked: $cust_email.clicked,
+              engaged: $cust_email.clicked
+            }
+          }
+        },
+        
+        customer_score: {
+          let purchase_score = if {($cust_purchases | sum(p => p.amount)) > 400} {
+            30
+          } else if {($cust_purchases | sum(p => p.amount)) > 200} {
+            20
+          } else {
+            10
+          }
+          
+          let review_score = if {($cust_reviews | count) > 0} {
+            ($cust_reviews | mean(r => r.rating)) * 5
+          } else {
+            0
+          }
+          
+          let engagement_score = if {$cust_email != null and $cust_email.clicked} {
+            15
+          } else if {$cust_email != null and $cust_email.opened} {
+            5
+          } else {
+            0
+          }
+          
+          let support_penalty = ($cust_tickets | where(t => t.status == "open") | count) * 5
+          
+          $purchase_score + $review_score + $engagement_score - $support_penalty
+        },
+        
+        segment: {
+          let score = {
+            let purchase_score = if {($cust_purchases | sum(p => p.amount)) > 400} {
+              30
+            } else if {($cust_purchases | sum(p => p.amount)) > 200} {
+              20
+            } else {
+              10
+            }
+            
+            let review_score = if {($cust_reviews | count) > 0} {
+              ($cust_reviews | mean(r => r.rating)) * 5
+            } else {
+              0
+            }
+            
+            let engagement_score = if {$cust_email != null and $cust_email.clicked} {
+              15
+            } else if {$cust_email != null and $cust_email.opened} {
+              5
+            } else {
+              0
+            }
+            
+            let support_penalty = ($cust_tickets | where(t => t.status == "open") | count) * 5
+            
+            $purchase_score + $review_score + $engagement_score - $support_penalty
+          }
+          
+          if {$score >= 50} {
+            "Champion"
+          } else if {$score >= 35} {
+            "Loyal"
+          } else if {$score >= 20} {
+            "Potential"
+          } else {
+            "At Risk"
+          }
+        },
+        
+        recommended_actions: [
+          if {($cust_tickets | where(t => t.status == "open" and t.priority == "high") | count) > 0} {
+            "urgent_support_followup"
+          } else {
+            null
+          },
+          if {($cust_purchases | count) > 0 and ($cust_reviews | count) == 0} {
+            "request_product_review"
+          } else {
+            null
+          },
+          if {$cust_email != null and not $cust_email.opened} {
+            "improve_email_relevance"
+          } else {
+            null
+          },
+          if {($cust_purchases | count) == 0} {
+            "first_purchase_incentive"
+          } else {
+            null
+          }
+        ]
+      }
+    })
+
+# Segment analysis
+let segment_breakdown = $enriched_customers
+  | group-by("segment")
+  | map(group => {
+      segment: group.key,
+      count: group.items | count,
+      avg_score: group.items | mean(c => c.customer_score),
+      total_revenue: group.items | sum(c => c.purchase_history.total_spent)
+    })
+  | order-by("avg_score", direction="desc")
+
+# At-risk customers needing attention
+let at_risk = $enriched_customers
+  | where(c => c.segment == "At Risk")
+  | map(c => {
+      name: c.name,
+      email: c.email,
+      score: c.customer_score,
+      issues: c.recommended_actions
+    })
+
+# Champions for referral program
+let champions = $enriched_customers
+  | where(c => c.segment == "Champion")
+  | map(c => {
+      name: c.name,
+      email: c.email,
+      total_spent: c.purchase_history.total_spent,
+      avg_rating: c.engagement.avg_rating
+    })
+
+# Output enriched data
+{
+  customers: $enriched_customers,
+  analysis: {
+    segments: $segment_breakdown,
+    at_risk_customers: $at_risk,
+    champion_customers: $champions
+  },
+  summary: {
+    total_customers: $enriched_customers | count,
+    total_revenue: $enriched_customers | sum(c => c.purchase_history.total_spent),
+    avg_customer_score: $enriched_customers | mean(c => c.customer_score),
+    customers_with_open_tickets: $enriched_customers
+      | where(c => c.support_profile.has_active_issues)
+      | count
+  }
+}

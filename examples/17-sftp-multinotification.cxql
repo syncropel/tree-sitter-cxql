@@ -1,0 +1,270 @@
+# SFTP File Upload with Email and Slack Notifications
+
+# Connect to SFTP server
+connect({
+  blueprint: "community/sftp@1.0",
+  host: "sftp.partner.com",
+  port: 22,
+  secrets: {username: "transfer_user", private_key: "-----BEGIN RSA..."}
+}, as="sftp")
+
+# Connect to email service
+connect({
+  blueprint: "community/smtp@1.0",
+  host: "smtp.company.com",
+  secrets: {username: "notifications@company.com", password: "pass"}
+}, as="email")
+
+# Connect to Slack
+connect({
+  blueprint: "community/slack@1.0",
+  secrets: {token: "xoxb-slack-token"}
+}, as="slack")
+
+# Connect to database for data export
+connect({
+  blueprint: "community/postgres@1.0",
+  host: "localhost",
+  database: "inventory",
+  secrets: {username: "export_user", password: "db_pass"}
+}, as="db")
+
+# Extract inventory data
+let inventory_data = $db.query($"
+  SELECT 
+    p.product_id,
+    p.sku,
+    p.product_name,
+    p.category,
+    i.warehouse_location,
+    i.quantity_on_hand,
+    i.quantity_reserved,
+    i.quantity_available,
+    i.reorder_point,
+    i.last_restocked,
+    CASE 
+      WHEN i.quantity_available <= i.reorder_point THEN 'LOW_STOCK'
+      WHEN i.quantity_available = 0 THEN 'OUT_OF_STOCK'
+      ELSE 'IN_STOCK'
+    END as stock_status
+  FROM products p
+  INNER JOIN inventory i ON p.product_id = i.product_id
+  WHERE p.active = true
+  ORDER BY p.category, p.product_name
+")
+
+# Transform data for partner format
+let partner_format = $inventory_data
+  | map(item => {
+      sku: item.sku,
+      name: item.product_name,
+      category: item.category,
+      location: item.warehouse_location,
+      available_qty: item.quantity_available,
+      status: item.stock_status,
+      needs_reorder: item.quantity_available <= item.reorder_point
+    })
+
+# Generate CSV content
+let csv_header = "SKU,Product Name,Category,Location,Available Quantity,Status,Needs Reorder"
+let csv_rows = $partner_format
+  | map(item => $"{item.sku},{item.name},{item.category},{item.location},{item.available_qty},{item.status},{item.needs_reorder}")
+
+let csv_content = $csv_header + "\n" + ($csv_rows | join("\n"))
+
+# Write to local file
+let local_file = "/tmp/inventory_export.csv"
+fs.write($local_file, $csv_content)
+
+# Calculate file size and checksum
+let file_info = {
+  size_bytes: fs.size($local_file),
+  checksum: fs.checksum($local_file, algorithm="md5"),
+  record_count: $partner_format | count
+}
+
+# Upload to SFTP
+let remote_path = $"/incoming/inventory_export_{2024}_{11}_{07}.csv"
+let upload_result = $sftp.upload({
+  local_path: $local_file,
+  remote_path: $remote_path,
+  create_directories: true
+})
+
+# Verify upload
+let remote_file_info = $sftp.stat($remote_path)
+let upload_verified = $remote_file_info.size == $file_info.size_bytes
+
+# Prepare notifications
+let notification_data = {
+  timestamp: "2024-11-07T12:00:00Z",
+  file: {
+    name: "inventory_export.csv",
+    remote_path: $remote_path,
+    size_mb: $file_info.size_bytes / 1048576,
+    checksum: $file_info.checksum,
+    record_count: $file_info.record_count
+  },
+  upload: {
+    status: if {$upload_verified} {"success"} else {"failed"},
+    verified: $upload_verified,
+    remote_size: $remote_file_info.size
+  },
+  inventory_summary: {
+    total_items: $inventory_data | count,
+    in_stock: $inventory_data | where(i => i.stock_status == "IN_STOCK") | count,
+    low_stock: $inventory_data | where(i => i.stock_status == "LOW_STOCK") | count,
+    out_of_stock: $inventory_data | where(i => i.stock_status == "OUT_OF_STOCK") | count
+  }
+}
+
+# Send email notification
+let email_status = if {$upload_verified} {
+  $email.send({
+    from: "notifications@company.com",
+    to: ["partner-integration@company.com"],
+    cc: ["operations@company.com"],
+    subject: $"✓ Inventory Export Successful - {$notification_data.timestamp}",
+    body: $"
+      <html>
+      <body>
+        <h2>Inventory Export Completed</h2>
+        <p>The inventory data has been successfully uploaded to the partner SFTP server.</p>
+        
+        <h3>File Details</h3>
+        <ul>
+          <li>Filename: {$notification_data.file.name}</li>
+          <li>Remote Path: {$notification_data.file.remote_path}</li>
+          <li>File Size: {$notification_data.file.size_mb} MB</li>
+          <li>MD5 Checksum: {$notification_data.file.checksum}</li>
+          <li>Record Count: {$notification_data.file.record_count}</li>
+        </ul>
+        
+        <h3>Inventory Summary</h3>
+        <ul>
+          <li>Total Items: {$notification_data.inventory_summary.total_items}</li>
+          <li>In Stock: {$notification_data.inventory_summary.in_stock}</li>
+          <li>Low Stock: {$notification_data.inventory_summary.low_stock}</li>
+          <li>Out of Stock: {$notification_data.inventory_summary.out_of_stock}</li>
+        </ul>
+        
+        <p>Upload verified: Size matches ({$notification_data.upload.remote_size} bytes)</p>
+      </body>
+      </html>
+    ",
+    body_type: "html"
+  })
+} else {
+  $email.send({
+    from: "notifications@company.com",
+    to: ["partner-integration@company.com", "operations@company.com"],
+    subject: $"✗ Inventory Export Failed - {$notification_data.timestamp}",
+    body: $"
+      <html>
+      <body>
+        <h2 style='color: red;'>Inventory Export Failed</h2>
+        <p>There was an issue uploading the inventory data to the partner SFTP server.</p>
+        
+        <h3>Error Details</h3>
+        <p>File size mismatch detected. Upload may have been corrupted.</p>
+        <ul>
+          <li>Local Size: {$file_info.size_bytes} bytes</li>
+          <li>Remote Size: {$remote_file_info.size} bytes</li>
+        </ul>
+        
+        <p>Please investigate immediately.</p>
+      </body>
+      </html>
+    ",
+    body_type: "html",
+    priority: "high"
+  })
+}
+
+# Send Slack notification
+let slack_message = if {$upload_verified} {
+  {
+    channel: "#partner-integrations",
+    text: $"✓ Inventory export completed successfully",
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: $"*Inventory Export - Success*\nFile uploaded to partner SFTP server"
+        }
+      },
+      {
+        type: "section",
+        fields: [
+          {type: "mrkdwn", text: $"*Records:*\n{$file_info.record_count}"},
+          {type: "mrkdwn", text: $"*Size:*\n{$notification_data.file.size_mb} MB"},
+          {type: "mrkdwn", text: $"*In Stock:*\n{$notification_data.inventory_summary.in_stock}"},
+          {type: "mrkdwn", text: $"*Low Stock:*\n{$notification_data.inventory_summary.low_stock}"}
+        ]
+      },
+      {
+        type: "context",
+        elements: [
+          {type: "mrkdwn", text: $"Remote path: `{$remote_path}`"}
+        ]
+      }
+    ]
+  }
+} else {
+  {
+    channel: "#partner-integrations",
+    text: $"✗ Inventory export failed - URGENT",
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: $"*Inventory Export - FAILED* :warning:\nFile upload verification failed"
+        }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: $"Size mismatch detected. Please investigate immediately."
+        }
+      }
+    ]
+  }
+}
+
+$slack.send($slack_message)
+
+# Also send to specific team members if there are issues
+if {not $upload_verified or $notification_data.inventory_summary.out_of_stock > 10} {
+  $slack.send({
+    channel: "@operations-lead",
+    text: $"⚠️ Inventory export requires attention. Out of stock items: {$notification_data.inventory_summary.out_of_stock}"
+  })
+}
+
+# Clean up local file
+fs.delete($local_file)
+
+# Log to database
+$db.execute($"
+  INSERT INTO file_transfer_log 
+    (transfer_type, filename, remote_path, file_size, checksum, record_count, status, timestamp)
+  VALUES 
+    ('sftp_upload', '{$notification_data.file.name}', '{$remote_path}', 
+     {$file_info.size_bytes}, '{$file_info.checksum}', {$file_info.record_count},
+     '{$notification_data.upload.status}', NOW())
+")
+
+# Return result
+{
+  success: $upload_verified,
+  file_info: $notification_data.file,
+  upload_status: $notification_data.upload,
+  inventory_summary: $notification_data.inventory_summary,
+  notifications_sent: {
+    email: true,
+    slack: true
+  }
+}

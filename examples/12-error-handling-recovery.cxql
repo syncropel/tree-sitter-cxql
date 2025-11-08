@@ -1,0 +1,104 @@
+# Error Handling and Recovery Patterns
+
+# Simulated API responses with potential failures
+let api_responses = [
+  {id: 1, status: "success", data: {value: 100}},
+  {id: 2, status: "error", error_code: 404, message: "Not found"},
+  {id: 3, status: "success", data: {value: 200}},
+  {id: 4, status: "error", error_code: 500, message: "Server error"},
+  {id: 5, status: "success", data: {value: 150}}
+]
+
+# Separate successful and failed responses
+let successful = $api_responses
+  | where(r => r.status == "success")
+  | map(r => r.data)
+
+let failed = $api_responses
+  | where(r => r.status == "error")
+  | map(r => {
+      id: r.id,
+      error_code: r.error_code,
+      message: r.message,
+      severity: if {r.error_code >= 500} {
+        "critical"
+      } else if {r.error_code >= 400} {
+        "warning"
+      } else {
+        "info"
+      }
+    })
+
+# Retry logic simulation
+let retry_candidates = $failed
+  | where(f => f.error_code == 500)
+  | map(f => {
+      id: f.id,
+      retry_count: 1,
+      max_retries: 3,
+      should_retry: true,
+      backoff_seconds: 2
+    })
+
+# Success metrics
+let success_rate = ($successful | count * 100) / ($api_responses | count)
+let failure_breakdown = $failed
+  | group-by("severity")
+  | map(group => {
+      severity: group.key,
+      count: group.items | count,
+      ids: group.items | map(i => i.id)
+    })
+
+# Recovery actions
+let recovery_actions = $failed
+  | map(f => {
+      id: f.id,
+      action: if {f.error_code == 404} {
+        "fallback_to_cache"
+      } else if {f.error_code == 500} {
+        "retry_with_backoff"
+      } else if {f.error_code == 503} {
+        "circuit_breaker_open"
+      } else {
+        "log_and_skip"
+      },
+      priority: if {f.severity == "critical"} {1} else {2}
+    })
+  | order-by("priority", direction="asc")
+
+# Fallback values for failed requests
+let with_fallbacks = $api_responses
+  | map(r => {
+      id: r.id,
+      value: if {r.status == "success"} {
+        r.data.value
+      } else {
+        0
+      },
+      is_fallback: r.status == "error"
+    })
+
+# Output comprehensive error handling report
+{
+  summary: {
+    total_requests: $api_responses | count,
+    successful: $successful | count,
+    failed: $failed | count,
+    success_rate: $success_rate
+  },
+  failures: {
+    breakdown: $failure_breakdown,
+    retry_candidates: $retry_candidates,
+    recovery_actions: $recovery_actions
+  },
+  results: {
+    successful_data: $successful,
+    with_fallbacks: $with_fallbacks
+  },
+  alerts: if {$success_rate < 80} {
+    $"ALERT: Success rate below threshold: {$success_rate}%"
+  } else {
+    "System operating normally"
+  }
+}

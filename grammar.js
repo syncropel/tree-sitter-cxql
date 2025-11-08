@@ -42,7 +42,7 @@ module.exports = grammar({
         ")"
       ),
 
-    expression_statement: ($) => $._expression,
+    expression_statement: ($) => prec(-1, $._expression),
 
     // ============================================================================
     // Expressions
@@ -166,13 +166,14 @@ module.exports = grammar({
       ),
 
     // Member access (Level 10 - highest precedence)
+
     member_expression: ($) =>
       prec(
         10,
         seq(
           field("object", $._primary_expression),
           ".",
-          field("property", $.identifier)
+          field("property", choice($.identifier, $.number_literal))
         )
       ),
 
@@ -244,9 +245,16 @@ module.exports = grammar({
 
     _block_body: ($) =>
       choice(
+        // Statements followed by result
+        seq(
+          repeat($.let_statement),
+          repeat($.expression_statement),
+          field("result", $._expression)
+        ),
+        // Only let statements, no result
         repeat1($.let_statement),
-        seq(repeat1($.let_statement), field("result", $._expression)),
-        field("result", $._expression)
+        // Only expression statements, no result
+        repeat1($.expression_statement)
       ),
 
     if_expression: ($) =>
@@ -255,16 +263,7 @@ module.exports = grammar({
         field("condition", $.block),
         field("consequent", $.block),
         optional(
-          seq(
-            "else",
-            field(
-              "alternative",
-              choice(
-                $.block, // Allow: else { ... }
-                $.if_expression // Allow: else if { ... } { ... } else { ... }
-              )
-            )
-          )
+          seq("else", field("alternative", choice($.block, $.if_expression)))
         )
       ),
 

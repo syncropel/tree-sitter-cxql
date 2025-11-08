@@ -1,0 +1,199 @@
+# Aggregate Reporting and Dashboard Generation
+
+# Sample transaction data
+let transactions = [
+  {date: "2024-11-01", product: "Widget", category: "Hardware", amount: 150, customer: "Alice", region: "West"},
+  {date: "2024-11-01", product: "Gadget", category: "Electronics", amount: 300, customer: "Bob", region: "East"},
+  {date: "2024-11-02", product: "Widget", category: "Hardware", amount: 150, customer: "Charlie", region: "West"},
+  {date: "2024-11-02", product: "Tool", category: "Hardware", amount: 75, customer: "Diana", region: "South"},
+  {date: "2024-11-03", product: "Gadget", category: "Electronics", amount: 300, customer: "Eve", region: "East"},
+  {date: "2024-11-03", product: "Widget", category: "Hardware", amount: 150, customer: "Frank", region: "North"},
+  {date: "2024-11-03", product: "Tool", category: "Hardware", amount: 75, customer: "Grace", region: "South"}
+]
+
+# Daily aggregates
+let daily_summary = $transactions
+  | group-by("date")
+  | map(group => {
+      date: group.key,
+      total_revenue: group.items | sum(t => t.amount),
+      transaction_count: group.items | count,
+      avg_transaction: group.items | mean(t => t.amount),
+      unique_customers: group.items
+        | map(t => t.customer)
+        | distinct
+        | count
+    })
+  | order-by("date", direction="asc")
+
+# Category performance
+let category_performance = $transactions
+  | group-by("category")
+  | map(group => {
+      category: group.key,
+      revenue: group.items | sum(t => t.amount),
+      units_sold: group.items | count,
+      avg_price: group.items | mean(t => t.amount),
+      share_of_total: {
+        let total = $transactions | sum(t => t.amount)
+        let cat_total = group.items | sum(t => t.amount)
+        (cat_total * 100) / $total
+      },
+      top_products: group.items
+        | group-by("product")
+        | map(pg => {
+            product: pg.key,
+            count: pg.items | count
+          })
+        | order-by("count", direction="desc")
+        | limit(3)
+    })
+  | order-by("revenue", direction="desc")
+
+# Regional analysis
+let regional_analysis = $transactions
+  | group-by("region")
+  | map(group => {
+      region: group.key,
+      revenue: group.items | sum(t => t.amount),
+      customers: group.items
+        | map(t => t.customer)
+        | distinct
+        | count,
+      avg_transaction: group.items | mean(t => t.amount),
+      performance_rating: if {(group.items | sum(t => t.amount)) > 400} {
+        "Excellent"
+      } else if {(group.items | sum(t => t.amount)) > 200} {
+        "Good"
+      } else {
+        "Needs Improvement"
+      }
+    })
+
+# Product rankings
+let product_rankings = $transactions
+  | group-by("product")
+  | map(group => {
+      product: group.key,
+      total_sales: group.items | sum(t => t.amount),
+      units_sold: group.items | count,
+      category: group.items | first | map(t => t.category),
+      rank: 1
+    })
+  | order-by("total_sales", direction="desc")
+
+# Customer analysis
+let customer_analysis = $transactions
+  | group-by("customer")
+  | map(group => {
+      customer: group.key,
+      total_spent: group.items | sum(t => t.amount),
+      transactions: group.items | count,
+      avg_purchase: group.items | mean(t => t.amount),
+      products_bought: group.items
+        | map(t => t.product)
+        | distinct,
+      segment: if {(group.items | sum(t => t.amount)) > 300} {
+        "High Value"
+      } else if {(group.items | sum(t => t.amount)) > 150} {
+        "Medium Value"
+      } else {
+        "Low Value"
+      }
+    })
+  | order-by("total_spent", direction="desc")
+
+# Trend analysis (growth calculation)
+let trends = {
+  day1_revenue: $transactions
+    | where(t => t.date == "2024-11-01")
+    | sum(t => t.amount),
+  day2_revenue: $transactions
+    | where(t => t.date == "2024-11-02")
+    | sum(t => t.amount),
+  day3_revenue: $transactions
+    | where(t => t.date == "2024-11-03")
+    | sum(t => t.amount)
+}
+
+let growth = {
+  day1_to_day2: {
+    let d1 = $trends.day1_revenue
+    let d2 = $trends.day2_revenue
+    if {$d1 > 0} {
+      (($d2 - $d1) * 100) / $d1
+    } else {
+      0
+    }
+  },
+  day2_to_day3: {
+    let d2 = $trends.day2_revenue
+    let d3 = $trends.day3_revenue
+    if {$d2 > 0} {
+      (($d3 - $d2) * 100) / $d2
+    } else {
+      0
+    }
+  }
+}
+
+# KPIs and metrics
+let kpis = {
+  total_revenue: $transactions | sum(t => t.amount),
+  total_transactions: $transactions | count,
+  avg_transaction_value: $transactions | mean(t => t.amount),
+  unique_customers: $transactions
+    | map(t => t.customer)
+    | distinct
+    | count,
+  unique_products: $transactions
+    | map(t => t.product)
+    | distinct
+    | count,
+  revenue_per_customer: {
+    let total = $transactions | sum(t => t.amount)
+    let customers = $transactions | map(t => t.customer) | distinct | count
+    $total / $customers
+  }
+}
+
+# Dashboard output
+{
+  executive_summary: $kpis,
+  time_series: {
+    daily: $daily_summary,
+    growth_rates: $growth
+  },
+  performance: {
+    by_category: $category_performance,
+    by_region: $regional_analysis,
+    product_rankings: $product_rankings
+  },
+  customer_insights: {
+    analysis: $customer_analysis,
+    segments: $customer_analysis
+      | group-by("segment")
+      | map(g => {
+          segment: g.key,
+          count: g.items | count,
+          total_revenue: g.items | sum(c => c.total_spent)
+        })
+  },
+  recommendations: [
+    if {($regional_analysis | where(r => r.performance_rating == "Needs Improvement") | count) > 0} {
+      "Focus on underperforming regions"
+    } else {
+      null
+    },
+    if {$growth.day2_to_day3 < 0} {
+      "Revenue declined - investigate causes"
+    } else {
+      null
+    },
+    if {$kpis.revenue_per_customer < 200} {
+      "Increase customer spend through upselling"
+    } else {
+      null
+    }
+  ]
+}

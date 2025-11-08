@@ -102,8 +102,12 @@
       ]
     },
     "expression_statement": {
-      "type": "SYMBOL",
-      "name": "_expression"
+      "type": "PREC",
+      "value": -1,
+      "content": {
+        "type": "SYMBOL",
+        "name": "_expression"
+      }
     },
     "_expression": {
       "type": "CHOICE",
@@ -568,8 +572,17 @@
             "type": "FIELD",
             "name": "property",
             "content": {
-              "type": "SYMBOL",
-              "name": "identifier"
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "identifier"
+                },
+                {
+                  "type": "SYMBOL",
+                  "name": "number_literal"
+                }
+              ]
             }
           }
         ]
@@ -901,20 +914,20 @@
       "type": "CHOICE",
       "members": [
         {
-          "type": "REPEAT1",
-          "content": {
-            "type": "SYMBOL",
-            "name": "let_statement"
-          }
-        },
-        {
           "type": "SEQ",
           "members": [
             {
-              "type": "REPEAT1",
+              "type": "REPEAT",
               "content": {
                 "type": "SYMBOL",
                 "name": "let_statement"
+              }
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SYMBOL",
+                "name": "expression_statement"
               }
             },
             {
@@ -928,11 +941,17 @@
           ]
         },
         {
-          "type": "FIELD",
-          "name": "result",
+          "type": "REPEAT1",
           "content": {
             "type": "SYMBOL",
-            "name": "_expression"
+            "name": "let_statement"
+          }
+        },
+        {
+          "type": "REPEAT1",
+          "content": {
+            "type": "SYMBOL",
+            "name": "expression_statement"
           }
         }
       ]

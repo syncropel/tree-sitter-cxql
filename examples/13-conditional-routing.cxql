@@ -1,0 +1,138 @@
+# Conditional Data Routing - Smart Data Distribution
+
+# Incoming data stream
+let incoming_events = [
+  {id: 1, type: "order", priority: "high", amount: 5000, region: "US"},
+  {id: 2, type: "inquiry", priority: "low", amount: 0, region: "EU"},
+  {id: 3, type: "order", priority: "normal", amount: 500, region: "US"},
+  {id: 4, type: "complaint", priority: "high", amount: 0, region: "APAC"},
+  {id: 5, type: "order", priority: "high", amount: 12000, region: "EU"},
+  {id: 6, type: "inquiry", priority: "normal", amount: 0, region: "US"}
+]
+
+# Define routing rules
+let route_to_express_processing = event => {
+  event.type == "order" and event.priority == "high" and event.amount > 1000
+}
+
+let route_to_standard_processing = event => {
+  event.type == "order" and not $route_to_express_processing(event)
+}
+
+let route_to_customer_service = event => {
+  event.type == "complaint" or (event.type == "inquiry" and event.priority == "high")
+}
+
+let route_to_analytics = event => {
+  event.type == "inquiry" and event.priority == "low"
+}
+
+# Route events to appropriate queues
+let express_queue = $incoming_events
+  | where($route_to_express_processing)
+  | map(e => {
+      event: e,
+      queue: "express",
+      sla_minutes: 15,
+      assigned_to: if {e.region == "US"} {"team-us-express"} else {"team-global-express"}
+    })
+
+let standard_queue = $incoming_events
+  | where($route_to_standard_processing)
+  | map(e => {
+      event: e,
+      queue: "standard",
+      sla_minutes: 60,
+      assigned_to: $"team-{e.region}-standard"
+    })
+
+let service_queue = $incoming_events
+  | where($route_to_customer_service)
+  | map(e => {
+      event: e,
+      queue: "customer_service",
+      sla_minutes: if {e.priority == "high"} {30} else {120},
+      assigned_to: "team-support"
+    })
+
+let analytics_queue = $incoming_events
+  | where($route_to_analytics)
+  | map(e => {
+      event: e,
+      queue: "analytics",
+      sla_minutes: null,
+      assigned_to: "team-analytics"
+    })
+
+# Priority routing - check for escalations
+let needs_escalation = $incoming_events
+  | where(e => e.priority == "high" and e.type == "complaint")
+  | map(e => {
+      event: e,
+      escalated_to: "management",
+      escalation_reason: "high_priority_complaint",
+      notify: ["manager@example.com", "support-lead@example.com"]
+    })
+
+# Regional distribution
+let regional_distribution = $incoming_events
+  | group-by("region")
+  | map(group => {
+      region: group.key,
+      total: group.items | count,
+      by_type: group.items
+        | group-by("type")
+        | map(tg => {
+            type: tg.key,
+            count: tg.items | count
+          })
+    })
+
+# Load balancing - distribute across teams
+let team_assignments = [
+  {queue: "express", events: $express_queue},
+  {queue: "standard", events: $standard_queue},
+  {queue: "customer_service", events: $service_queue},
+  {queue: "analytics", events: $analytics_queue}
+]
+
+let load_summary = $team_assignments
+  | map(ta => {
+      queue: ta.queue,
+      count: ta.events | count,
+      capacity_used: ((ta.events | count) * 100) / 100,
+      status: if {(ta.events | count) > 80} {
+        "overloaded"
+      } else if {(ta.events | count) > 50} {
+        "busy"
+      } else {
+        "available"
+      }
+    })
+
+# Output routing results
+{
+  incoming: {
+    total: $incoming_events | count,
+    by_type: $incoming_events
+      | group-by("type")
+      | map(g => {type: g.key, count: g.items | count}),
+    by_priority: $incoming_events
+      | group-by("priority")
+      | map(g => {priority: g.key, count: g.items | count})
+  },
+  routing: {
+    express: $express_queue,
+    standard: $standard_queue,
+    service: $service_queue,
+    analytics: $analytics_queue
+  },
+  escalations: $needs_escalation,
+  distribution: {
+    regional: $regional_distribution,
+    load_balancing: $load_summary
+  },
+  alerts: $load_summary
+    | where(ls => ls.status == "overloaded")
+    | map(ls => $"Queue {ls.queue} is overloaded with {ls.count} items")
+}

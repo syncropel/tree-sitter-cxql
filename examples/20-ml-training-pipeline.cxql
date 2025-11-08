@@ -1,0 +1,379 @@
+# Machine Learning Training Pipeline with Python Integration
+
+# Connect to Python ML environment
+connect({
+  blueprint: "community/python@1.0",
+  python_path: "/usr/bin/python3",
+  venv: "/opt/ml/venv"
+}, as="python")
+
+# Connect to database for training data
+connect({
+  blueprint: "community/postgres@1.0",
+  host: "ml-db.company.com",
+  database: "ml_platform",
+  secrets: {username: "ml_user", password: "ml_pass"}
+}, as="db")
+
+# Connect to cloud storage
+connect({
+  blueprint: "community/s3@1.0",
+  bucket: "ml-artifacts",
+  secrets: {access_key: "aws_key", secret_key: "aws_secret"}
+}, as="storage")
+
+# Connect to MLflow for experiment tracking
+connect({
+  blueprint: "community/mlflow@1.0",
+  tracking_uri: "http://mlflow.company.com:5000"
+}, as="mlflow")
+
+# Connect to notification service
+connect({
+  blueprint: "community/slack@1.0",
+  secrets: {token: "slack_token"}
+}, as="slack")
+
+# Define ML experiment parameters
+let experiment_config = {
+  name: "customer_churn_prediction",
+  version: "v3.0",
+  model_type: "gradient_boosting",
+  hyperparameters: {
+    learning_rate: [0.01, 0.05, 0.1],
+    max_depth: [3, 5, 7, 10],
+    n_estimators: [100, 200, 300],
+    subsample: [0.8, 0.9, 1.0]
+  },
+  validation_split: 0.2,
+  random_state: 42
+}
+
+# Start MLflow experiment
+let experiment = $mlflow.create-experiment({
+  name: $experiment_config.name,
+  tags: {
+    version: $experiment_config.version,
+    model_type: $experiment_config.model_type,
+    timestamp: "2024-11-07T12:00:00Z"
+  }
+})
+
+# Extract training data from database
+$slack.send({
+  channel: "#ml-team",
+  text: $"Starting ML training pipeline: {$experiment_config.name}"
+})
+
+let training_query = $"
+  SELECT 
+    c.customer_id,
+    c.tenure_months,
+    c.monthly_charges,
+    c.total_charges,
+    c.contract_type,
+    c.payment_method,
+    c.internet_service,
+    c.online_security,
+    c.tech_support,
+    c.streaming_tv,
+    c.streaming_movies,
+    u.login_count_last_month,
+    u.support_tickets_last_month,
+    u.avg_session_duration,
+    t.transaction_count,
+    t.avg_transaction_value,
+    c.churned as target
+  FROM customers c
+  LEFT JOIN usage_stats u ON c.customer_id = u.customer_id
+  LEFT JOIN transaction_summary t ON c.customer_id = t.customer_id
+  WHERE c.signup_date >= '2023-01-01'
+  AND c.data_quality_flag = 'verified'
+"
+
+let raw_data = $db.query($training_query)
+
+# Data validation and quality checks
+let data_quality = {
+  total_records: $raw_data | count,
+  missing_values: $raw_data
+    | map(row => {
+        customer_id: row.customer_id,
+        missing_count: [
+          if {row.tenure_months == null} {1} else {0},
+          if {row.monthly_charges == null} {1} else {0},
+          if {row.total_charges == null} {1} else {0}
+        ] | sum
+      })
+    | where(r => r.missing_count > 0)
+    | count,
+  target_distribution: {
+    churned: $raw_data | where(r => r.target == 1) | count,
+    retained: $raw_data | where(r => r.target == 0) | count,
+    churn_rate: ($raw_data | where(r => r.target == 1) | count) / ($raw_data | count) * 100
+  }
+}
+
+# Check data quality thresholds
+let quality_passed = $data_quality.missing_values < ($data_quality.total_records * 0.05) and
+                      $data_quality.target_distribution.churn_rate > 5 and
+                      $data_quality.target_distribution.churn_rate < 50
+
+if {not $quality_passed} {
+  $slack.send({
+    channel: "#ml-team",
+    text: $"Data quality check failed. Missing values: {$data_quality.missing_values}, Churn rate: {$data_quality.target_distribution.churn_rate}%"
+  })
+}
+
+# Export data to CSV for Python processing
+let data_file = "/tmp/training_data.csv"
+fs.write-csv($data_file, $raw_data)
+
+# Upload to cloud storage
+$storage.upload({
+  local_path: $data_file,
+  remote_path: $"experiments/{$experiment_config.name}/data/training_data.csv"
+})
+
+# Run Python training script with hyperparameter tuning
+let training_script = "
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.preprocessing import LabelEncoder
+import mlflow
+import mlflow.sklearn
+
+df = pd.read_csv('/tmp/training_data.csv')
+
+categorical_cols = ['contract_type', 'payment_method', 'internet_service', 
+                   'online_security', 'tech_support', 'streaming_tv', 'streaming_movies']
+
+for col in categorical_cols:
+    le = LabelEncoder()
+    df[col] = le.fit_transform(df[col].astype(str))
+
+X = df.drop(['customer_id', 'target'], axis=1)
+y = df['target']
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42, stratify=y
+)
+
+param_grid = {
+    'learning_rate': [0.01, 0.05, 0.1],
+    'max_depth': [3, 5, 7, 10],
+    'n_estimators': [100, 200, 300],
+    'subsample': [0.8, 0.9, 1.0]
+}
+
+with mlflow.start_run(run_name='customer_churn_prediction'):
+    gb = GradientBoostingClassifier(random_state=42)
+    grid_search = GridSearchCV(
+        gb, param_grid, cv=5, scoring='roc_auc', n_jobs=-1, verbose=1
+    )
+    grid_search.fit(X_train, y_train)
+    
+    best_model = grid_search.best_estimator_
+    
+    y_pred = best_model.predict(X_test)
+    y_pred_proba = best_model.predict_proba(X_test)[:, 1]
+    
+    metrics = {
+        'accuracy': accuracy_score(y_test, y_pred),
+        'precision': precision_score(y_test, y_pred),
+        'recall': recall_score(y_test, y_pred),
+        'f1': f1_score(y_test, y_pred),
+        'roc_auc': roc_auc_score(y_test, y_pred_proba)
+    }
+    
+    mlflow.log_params(grid_search.best_params_)
+    
+    for metric_name, metric_value in metrics.items():
+        mlflow.log_metric(metric_name, metric_value)
+    
+    feature_importance = pd.DataFrame({
+        'feature': X.columns,
+        'importance': best_model.feature_importances_
+    }).sort_values('importance', ascending=False)
+    
+    feature_importance.to_csv('/tmp/feature_importance.csv', index=False)
+    mlflow.log_artifact('/tmp/feature_importance.csv')
+    
+    mlflow.sklearn.log_model(best_model, 'model')
+    
+    results = {
+        'best_params': grid_search.best_params_,
+        'metrics': metrics,
+        'feature_importance': feature_importance.to_dict('records')
+    }
+    
+    import json
+    with open('/tmp/training_results.json', 'w') as f:
+        json.dump(results, f)
+    
+    print('Training completed successfully')
+"
+
+# Execute Python training
+$slack.send({
+  channel: "#ml-team",
+  text: $"Running hyperparameter tuning with {$experiment_config.hyperparameters.learning_rate | count} combinations..."
+})
+
+let training_result = $python.execute({
+  script: $training_script,
+  timeout: 3600
+})
+
+# Read training results
+let results = fs.read-json("/tmp/training_results.json")
+
+# Upload artifacts to cloud storage
+$storage.upload({
+  local_path: "/tmp/feature_importance.csv",
+  remote_path: $"experiments/{$experiment_config.name}/artifacts/feature_importance.csv"
+})
+
+$storage.upload({
+  local_path: "/tmp/training_results.json",
+  remote_path: $"experiments/{$experiment_config.name}/artifacts/training_results.json"
+})
+
+# Evaluate model performance
+let model_evaluation = {
+  metrics: $results.metrics,
+  best_hyperparameters: $results.best_params,
+  feature_importance: $results.feature_importance | limit(10),
+  performance_grade: if {$results.metrics.roc_auc > 0.85} {
+    "Excellent"
+  } else if {$results.metrics.roc_auc > 0.75} {
+    "Good"
+  } else if {$results.metrics.roc_auc > 0.65} {
+    "Fair"
+  } else {
+    "Poor"
+  },
+  meets_production_threshold: $results.metrics.roc_auc > 0.80 and 
+                               $results.metrics.precision > 0.70 and
+                               $results.metrics.recall > 0.65
+}
+
+# Store results in database
+$db.execute($"
+  INSERT INTO ml_experiments (
+    experiment_name, version, model_type, 
+    accuracy, precision, recall, f1_score, roc_auc,
+    best_params, training_samples, validation_samples,
+    status, created_at
+  ) VALUES (
+    '{$experiment_config.name}', 
+    '{$experiment_config.version}',
+    '{$experiment_config.model_type}',
+    {$results.metrics.accuracy},
+    {$results.metrics.precision},
+    {$results.metrics.recall},
+    {$results.metrics.f1},
+    {$results.metrics.roc_auc},
+    '{$results.best_params}',
+    {($raw_data | count) * (1 - $experiment_config.validation_split)},
+    {($raw_data | count) * $experiment_config.validation_split},
+    'completed',
+    NOW()
+  )
+")
+
+# Model deployment decision
+let deployment_decision = if {$model_evaluation.meets_production_threshold} {
+  let model_version = $mlflow.register-model({
+    model_uri: $"runs:/{$experiment.run_id}/model",
+    name: $experiment_config.name
+  })
+  
+  $mlflow.transition-model-version-stage({
+    name: $experiment_config.name,
+    version: $model_version,
+    stage: "Staging"
+  })
+  
+  {
+    deploy: true,
+    stage: "Staging",
+    model_version: $model_version,
+    reason: "Model meets production thresholds"
+  }
+} else {
+  {
+    deploy: false,
+    stage: null,
+    model_version: null,
+    reason: $"Model performance below threshold. ROC-AUC: {$results.metrics.roc_auc}"
+  }
+}
+
+# Send comprehensive notification
+let notification_color = if {$model_evaluation.meets_production_threshold} {"good"} else {"warning"}
+
+$slack.send({
+  channel: "#ml-team",
+  text: $"ML Training Complete: {$experiment_config.name} - Grade: {$model_evaluation.performance_grade}, ROC-AUC: {$results.metrics.roc_auc}"
+})
+
+# Clean up temporary files
+fs.delete($data_file)
+fs.delete("/tmp/training_results.json")
+fs.delete("/tmp/feature_importance.csv")
+
+# Final report
+{
+  experiment: {
+    name: $experiment_config.name,
+    version: $experiment_config.version,
+    run_id: $experiment.run_id,
+    status: "completed"
+  },
+  
+  data: {
+    quality: $data_quality,
+    quality_passed: $quality_passed
+  },
+  
+  training: {
+    hyperparameter_combinations: ($experiment_config.hyperparameters.learning_rate | count) *
+                                 ($experiment_config.hyperparameters.max_depth | count) *
+                                 ($experiment_config.hyperparameters.n_estimators | count) *
+                                 ($experiment_config.hyperparameters.subsample | count),
+    best_params: $results.best_params,
+    execution_status: $training_result.status
+  },
+  
+  evaluation: $model_evaluation,
+  
+  deployment: $deployment_decision,
+  
+  artifacts: {
+    model_uri: $"s3://ml-artifacts/experiments/{$experiment_config.name}/",
+    feature_importance: $"s3://ml-artifacts/experiments/{$experiment_config.name}/artifacts/feature_importance.csv",
+    results: $"s3://ml-artifacts/experiments/{$experiment_config.name}/artifacts/training_results.json"
+  },
+  
+  top_features: $results.feature_importance | limit(5),
+  
+  next_steps: if {$deployment_decision.deploy} {
+    [
+      "Monitor model performance in staging",
+      "Conduct A/B test against current production model",
+      "Schedule production deployment review"
+    ]
+  } else {
+    [
+      "Review feature engineering opportunities",
+      "Consider alternative model architectures",
+      "Investigate data quality issues",
+      $"Current ROC-AUC {$results.metrics.roc_auc} needs improvement to 0.80"
+    ]
+  }
+}
