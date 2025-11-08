@@ -1,0 +1,187 @@
+# Time Series and Temporal Data Analysis
+
+# Sample time-series data: daily metrics
+let daily_metrics = [
+  {date: "2024-11-01", sales: 1000, visitors: 500, conversions: 25},
+  {date: "2024-11-02", sales: 1200, visitors: 550, conversions: 30},
+  {date: "2024-11-03", sales: 1100, visitors: 525, conversions: 28},
+  {date: "2024-11-04", sales: 1500, visitors: 600, conversions: 35},
+  {date: "2024-11-05", sales: 1800, visitors: 700, conversions: 42},
+  {date: "2024-11-06", sales: 1600, visitors: 650, conversions: 38},
+  {date: "2024-11-07", sales: 1700, visitors: 680, conversions: 40}
+]
+
+# Basic time series calculations
+let total_sales = $daily_metrics | sum(d => d.sales)
+let avg_daily_sales = $daily_metrics | mean(d => d.sales)
+let max_sales_day = $daily_metrics
+  | order-by("sales", direction="desc")
+  | first
+
+let min_sales_day = $daily_metrics
+  | order-by("sales", direction="asc")
+  | first
+
+# Calculate daily changes (deltas)
+let with_previous = [
+  {date: "2024-11-01", sales: 1000, previous: null},
+  {date: "2024-11-02", sales: 1200, previous: 1000},
+  {date: "2024-11-03", sales: 1100, previous: 1200},
+  {date: "2024-11-04", sales: 1500, previous: 1100},
+  {date: "2024-11-05", sales: 1800, previous: 1500},
+  {date: "2024-11-06", sales: 1600, previous: 1800},
+  {date: "2024-11-07", sales: 1700, previous: 1600}
+]
+
+let daily_changes = $with_previous
+  | map(d => {
+      date: d.date,
+      sales: d.sales,
+      previous: d.previous,
+      change: if {d.previous == null} {
+        0
+      } else {
+        d.sales - d.previous
+      },
+      change_percent: if {d.previous == null} {
+        0
+      } else {
+        ((d.sales - d.previous) * 100) / d.previous
+      }
+    })
+
+# Conversion rate analysis over time
+let conversion_analysis = $daily_metrics
+  | map(d => {
+      date: d.date,
+      visitors: d.visitors,
+      conversions: d.conversions,
+      conversion_rate: (d.conversions * 100) / d.visitors,
+      revenue_per_visitor: d.sales / d.visitors
+    })
+
+# Moving averages (3-day window simulation)
+let moving_avg_data = [
+  {date: "2024-11-01", sales: 1000, ma3: null},
+  {date: "2024-11-02", sales: 1200, ma3: null},
+  {date: "2024-11-03", sales: 1100, ma3: 1100},
+  {date: "2024-11-04", sales: 1500, ma3: 1267},
+  {date: "2024-11-05", sales: 1800, ma3: 1467},
+  {date: "2024-11-06", sales: 1600, ma3: 1633},
+  {date: "2024-11-07", sales: 1700, ma3: 1700}
+]
+
+# Identify trends
+let trend_analysis = $daily_changes
+  | map(d => {
+      date: d.date,
+      sales: d.sales,
+      change: d.change,
+      trend: if {d.change > 0} {
+        "Up"
+      } else if {d.change < 0} {
+        "Down"
+      } else {
+        "Flat"
+      }
+    })
+
+# Period-over-period comparisons
+let week_1_total = $daily_metrics
+  | where(d => d.date <= "2024-11-03")
+  | sum(d => d.sales)
+
+let week_2_total = $daily_metrics
+  | where(d => d.date > "2024-11-03")
+  | sum(d => d.sales)
+
+let week_comparison = {
+  week_1: $week_1_total,
+  week_2: $week_2_total,
+  difference: $week_2_total - $week_1_total,
+  growth_rate: (($week_2_total - $week_1_total) * 100) / $week_1_total
+}
+
+# Cumulative calculations
+let cumulative = [
+  {date: "2024-11-01", sales: 1000, cumulative: 1000},
+  {date: "2024-11-02", sales: 1200, cumulative: 2200},
+  {date: "2024-11-03", sales: 1100, cumulative: 3300},
+  {date: "2024-11-04", sales: 1500, cumulative: 4800},
+  {date: "2024-11-05", sales: 1800, cumulative: 6600},
+  {date: "2024-11-06", sales: 1600, cumulative: 8200},
+  {date: "2024-11-07", sales: 1700, cumulative: 9900}
+]
+
+# Peak detection
+let peaks = $daily_metrics
+  | where(d => d.sales > $avg_daily_sales)
+  | map(d => {
+      date: d.date,
+      sales: d.sales,
+      above_average: d.sales - $avg_daily_sales
+    })
+
+# Seasonal patterns (day of week)
+let weekday_pattern = [
+  {day: "Monday", avg_sales: 1000},
+  {day: "Tuesday", avg_sales: 1200},
+  {day: "Wednesday", avg_sales: 1100},
+  {day: "Thursday", avg_sales: 1500},
+  {day: "Friday", avg_sales: 1800},
+  {day: "Saturday", avg_sales: 1600},
+  {day: "Sunday", avg_sales: 1700}
+]
+
+let best_day = $weekday_pattern
+  | order-by("avg_sales", direction="desc")
+  | first
+
+let worst_day = $weekday_pattern
+  | order-by("avg_sales", direction="asc")
+  | first
+
+# Anomaly detection (simple threshold-based)
+let threshold = $avg_daily_sales * 1.3
+
+let anomalies = $daily_metrics
+  | where(d => d.sales > $threshold or d.sales < ($avg_daily_sales * 0.7))
+  | map(d => {
+      date: d.date,
+      sales: d.sales,
+      type: if {d.sales > $threshold} {
+        "Spike"
+      } else {
+        "Drop"
+      },
+      deviation: if {d.sales > $threshold} {
+        d.sales - $threshold
+      } else {
+        ($avg_daily_sales * 0.7) - d.sales
+      }
+    })
+
+# Output comprehensive time series analysis
+{
+  summary: {
+    total_sales: $total_sales,
+    avg_daily_sales: $avg_daily_sales,
+    best_day: $max_sales_day,
+    worst_day: $min_sales_day
+  },
+  trends: {
+    daily_changes: $daily_changes,
+    trend_analysis: $trend_analysis
+  },
+  conversion: $conversion_analysis,
+  moving_averages: $moving_avg_data,
+  comparisons: $week_comparison,
+  cumulative: $cumulative,
+  patterns: {
+    peaks: $peaks,
+    weekday_pattern: $weekday_pattern,
+    best_performing_day: $best_day,
+    worst_performing_day: $worst_day
+  },
+  anomalies: $anomalies
+}

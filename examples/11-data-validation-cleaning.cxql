@@ -1,0 +1,188 @@
+# Data Validation and Cleaning Patterns
+
+# Sample raw data with various quality issues
+let raw_records = [
+  {id: 1, name: "Alice", email: "alice@example.com", age: 30, status: "active"},
+  {id: 2, name: "", email: "bob@invalid", age: -5, status: "active"},
+  {id: 3, name: "Charlie", email: "charlie@example.com", age: 25, status: "inactive"},
+  {id: 4, name: "Diana", email: null, age: 150, status: "suspended"},
+  {id: 5, name: "Eve", email: "eve@example.com", age: 28, status: "ACTIVE"},
+  {id: 6, name: null, email: "frank@example.com", age: 35, status: "active"}
+]
+
+# Validation rules
+let is_valid_email = email => {
+  not (email == null) and not (email == "")
+}
+
+let is_valid_age = age => {
+  age > 0 and age < 120
+}
+
+let is_valid_name = name => {
+  not (name == null) and not (name == "")
+}
+
+# Field-level validation
+let field_validation = $raw_records
+  | map(record => {
+      id: record.id,
+      validations: {
+        name: $is_valid_name(record.name),
+        email: $is_valid_email(record.email),
+        age: $is_valid_age(record.age),
+        has_status: not (record.status == null)
+      }
+    })
+
+# Record-level validation (all fields valid)
+let record_validation = $raw_records
+  | map(record => {
+      record: record,
+      is_valid: $is_valid_name(record.name) and 
+                $is_valid_email(record.email) and 
+                $is_valid_age(record.age) and
+                not (record.status == null)
+    })
+
+# Separate valid and invalid records
+let valid_records = $record_validation
+  | where(r => r.is_valid)
+  | map(r => r.record)
+
+let invalid_records = $record_validation
+  | where(r => not r.is_valid)
+  | map(r => {
+      record: r.record,
+      issues: [
+        if {not $is_valid_name(r.record.name)} {"Invalid name"} else {null},
+        if {not $is_valid_email(r.record.email)} {"Invalid email"} else {null},
+        if {not $is_valid_age(r.record.age)} {"Invalid age"} else {null}
+      ]
+    })
+
+# Data cleaning and normalization
+let cleaned_records = $raw_records
+  | map(record => {
+      id: record.id,
+      name: if {record.name == null or record.name == ""} {
+        "Unknown"
+      } else {
+        record.name
+      },
+      email: if {record.email == null or record.email == ""} {
+        "no-email@example.com"
+      } else {
+        record.email
+      },
+      age: if {record.age < 0 or record.age > 120} {
+        0
+      } else {
+        record.age
+      },
+      status: if {record.status == null} {
+        "unknown"
+      } else {
+        record.status
+      }
+    })
+
+# Standardization (normalize status field)
+let standardized_records = $cleaned_records
+  | map(record => {
+      id: record.id,
+      name: record.name,
+      email: record.email,
+      age: record.age,
+      status: if {record.status == "ACTIVE" or record.status == "active"} {
+        "active"
+      } else if {record.status == "inactive"} {
+        "inactive"
+      } else if {record.status == "suspended"} {
+        "suspended"
+      } else {
+        "unknown"
+      }
+    })
+
+# Duplicate detection (by email)
+let email_groups = $standardized_records
+  | where(r => not (r.email == "no-email@example.com"))
+  | group-by("email")
+  | map(group => {
+      email: group.key,
+      count: group.items | count,
+      is_duplicate: (group.items | count) > 1,
+      records: group.items
+    })
+
+let duplicates = $email_groups
+  | where(g => g.is_duplicate)
+
+# Completeness check
+let completeness_check = $standardized_records
+  | map(record => {
+      id: record.id,
+      completeness_score: {
+        let score = 0
+        let score_with_name = if {not (record.name == "Unknown")} {
+          $score + 25
+        } else {
+          $score
+        }
+        let score_with_email = if {not (record.email == "no-email@example.com")} {
+          $score_with_name + 25
+        } else {
+          $score_with_name
+        }
+        let score_with_age = if {record.age > 0} {
+          $score_with_email + 25
+        } else {
+          $score_with_email
+        }
+        let final_score = if {not (record.status == "unknown")} {
+          $score_with_age + 25
+        } else {
+          $score_with_age
+        }
+        $final_score
+      }
+    })
+
+# Quality metrics
+let total_records = $raw_records | count
+let valid_count = $valid_records | count
+let invalid_count = $invalid_records | count
+let duplicate_count = $duplicates | count
+
+let quality_metrics = {
+  total_records: $total_records,
+  valid_records: $valid_count,
+  invalid_records: $invalid_count,
+  validity_rate: ($valid_count * 100) / $total_records,
+  duplicates: $duplicate_count,
+  avg_completeness: $completeness_check | mean(c => c.completeness_score)
+}
+
+# Data quality report
+let quality_report = {
+  summary: $quality_metrics,
+  validation_details: {
+    field_validation: $field_validation,
+    valid_records: $valid_records,
+    invalid_records: $invalid_records
+  },
+  cleaning_results: {
+    original_count: $total_records,
+    cleaned_count: $standardized_records | count,
+    cleaned_records: $standardized_records
+  },
+  issues: {
+    duplicates: $duplicates,
+    low_completeness: $completeness_check
+      | where(c => c.completeness_score < 75)
+  }
+}
+
+# Output comprehensive data quality analysis
+$quality_report

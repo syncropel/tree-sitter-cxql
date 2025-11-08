@@ -1,0 +1,187 @@
+# Data Joins and Merging Operations
+
+# Sample datasets for joining
+let users = [
+  {id: 1, name: "Alice", dept_id: 10},
+  {id: 2, name: "Bob", dept_id: 20},
+  {id: 3, name: "Charlie", dept_id: 10},
+  {id: 4, name: "Diana", dept_id: 30}
+]
+
+let departments = [
+  {id: 10, name: "Engineering", location: "Building A"},
+  {id: 20, name: "Sales", location: "Building B"},
+  {id: 30, name: "HR", location: "Building C"}
+]
+
+let salaries = [
+  {user_id: 1, amount: 80000, currency: "USD"},
+  {user_id: 2, amount: 70000, currency: "USD"},
+  {user_id: 3, amount: 85000, currency: "USD"}
+]
+
+# Inner join pattern (users with departments)
+let users_with_departments = $users
+  | map(user => {
+      user: user,
+      department: $departments
+        | where(d => d.id == user.dept_id)
+        | first
+    })
+  | map(result => {
+      id: result.user.id,
+      name: result.user.name,
+      department: result.department.name,
+      location: result.department.location
+    })
+
+# Left join pattern (users with optional salaries)
+let users_with_salaries = $users
+  | map(user => {
+      user: user,
+      salary_info: $salaries
+        | where(s => s.user_id == user.id)
+        | first
+    })
+  | map(result => {
+      id: result.user.id,
+      name: result.user.name,
+      salary: if {result.salary_info == null} {
+        "Not specified"
+      } else {
+        result.salary_info.amount
+      }
+    })
+
+# Complex multi-way join
+let complete_user_info = $users
+  | map(user => {
+      # Get department
+      let dept = $departments
+        | where(d => d.id == user.dept_id)
+        | first
+      
+      # Get salary
+      let salary = $salaries
+        | where(s => s.user_id == user.id)
+        | first
+      
+      {
+        user_id: user.id,
+        name: user.name,
+        department: $dept.name,
+        location: $dept.location,
+        salary: if {$salary == null} {0} else {$salary.amount},
+        has_salary_info: not ($salary == null)
+      }
+    })
+
+# Grouping with aggregations (department summaries)
+let department_summaries = $complete_user_info
+  | group-by("department")
+  | map(group => {
+      department: group.key,
+      employee_count: group.items | count,
+      total_payroll: group.items | sum(i => i.salary),
+      avg_salary: group.items | mean(i => i.salary),
+      employees: group.items | map(i => i.name)
+    })
+
+# Cross-reference pattern (many-to-many simulation)
+let projects = [
+  {id: 101, name: "Project Alpha", lead_id: 1},
+  {id: 102, name: "Project Beta", lead_id: 2},
+  {id: 103, name: "Project Gamma", lead_id: 1}
+]
+
+let project_assignments = [
+  {project_id: 101, user_id: 1},
+  {project_id: 101, user_id: 3},
+  {project_id: 102, user_id: 2},
+  {project_id: 102, user_id: 4},
+  {project_id: 103, user_id: 1},
+  {project_id: 103, user_id: 3},
+  {project_id: 103, user_id: 4}
+]
+
+# Projects with team members
+let projects_with_teams = $projects
+  | map(project => {
+      project: project,
+      assignments: $project_assignments
+        | where(a => a.project_id == project.id),
+      lead: $users
+        | where(u => u.id == project.lead_id)
+        | first
+    })
+  | map(result => {
+      project_id: result.project.id,
+      project_name: result.project.name,
+      lead_name: result.lead.name,
+      team_size: result.assignments | count,
+      team_members: result.assignments
+        | map(a => {
+            let member = $users
+              | where(u => u.id == a.user_id)
+              | first
+            $member.name
+          })
+    })
+
+# Union pattern (combining similar datasets)
+let team_a = [
+  {id: 1, name: "Alice", team: "A"},
+  {id: 2, name: "Bob", team: "A"}
+]
+
+let team_b = [
+  {id: 3, name: "Charlie", team: "B"},
+  {id: 4, name: "Diana", team: "B"}
+]
+
+# Manual union using list concatenation simulation
+let all_teams = [
+  {id: 1, name: "Alice", team: "A"},
+  {id: 2, name: "Bob", team: "A"},
+  {id: 3, name: "Charlie", team: "B"},
+  {id: 4, name: "Diana", team: "B"}
+]
+
+# Lookup table pattern
+let status_codes = [
+  {code: "ACT", description: "Active"},
+  {code: "INA", description: "Inactive"},
+  {code: "SUS", description: "Suspended"}
+]
+
+let accounts = [
+  {id: 1001, name: "Account A", status: "ACT"},
+  {id: 1002, name: "Account B", status: "INA"},
+  {id: 1003, name: "Account C", status: "ACT"}
+]
+
+let accounts_with_status = $accounts
+  | map(account => {
+      let status_desc = $status_codes
+        | where(s => s.code == account.status)
+        | first
+      
+      {
+        id: account.id,
+        name: account.name,
+        status_code: account.status,
+        status_description: $status_desc.description
+      }
+    })
+
+# Output comprehensive join results
+{
+  basic_joins: {
+    users_with_departments: $users_with_departments,
+    users_with_salaries: $users_with_salaries
+  },
+  complete_info: $complete_user_info,
+  department_summaries: $department_summaries,
+  projects: $projects_with_teams,
+  lookups: $accounts_with_status
+}
