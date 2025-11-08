@@ -1,0 +1,139 @@
+# Advanced Collection Operations and List Processing
+
+# Complex filtering and selection
+let products = [
+  {id: 1, name: "Laptop", category: "Electronics", price: 999, stock: 5},
+  {id: 2, name: "Mouse", category: "Electronics", price: 25, stock: 50},
+  {id: 3, name: "Desk", category: "Furniture", price: 299, stock: 10},
+  {id: 4, name: "Chair", category: "Furniture", price: 199, stock: 15},
+  {id: 5, name: "Monitor", category: "Electronics", price: 399, stock: 8}
+]
+
+# Multiple filter conditions
+let expensive_electronics = $products
+  | where(p => p.category == "Electronics" and p.price > 100)
+
+let low_stock = $products
+  | where(p => p.stock < 10)
+  | map(p => {
+      id: p.id,
+      name: p.name,
+      stock: p.stock,
+      status: "Low Stock Alert"
+    })
+
+# Grouping operations
+let by_category = $products
+  | group-by("category")
+  | map(group => {
+      category: group.key,
+      count: group.items | count,
+      total_value: group.items | sum(p => p.price * p.stock),
+      products: group.items | map(p => p.name)
+    })
+
+# Sorting and ranking
+let by_price = $products
+  | order-by("price", direction="desc")
+  | map(p => {
+      name: p.name,
+      price: p.price,
+      rank: 1
+    })
+
+# Top N selection
+let top_3_expensive = $products
+  | order-by("price", direction="desc")
+  | limit(3)
+
+# Partitioning
+let inventory_status = $products
+  | map(p => {
+      product: p,
+      status: if {p.stock < 10} {
+        "Critical"
+      } else if {p.stock < 20} {
+        "Low"
+      } else {
+        "Adequate"
+      }
+    })
+  | group-by("status")
+
+# Nested collections
+let categories = [
+  {
+    name: "Electronics",
+    subcategories: ["Computers", "Accessories", "Monitors"]
+  },
+  {
+    name: "Furniture",
+    subcategories: ["Office", "Home", "Outdoor"]
+  }
+]
+
+let flattened = $categories
+  | map(cat => cat.subcategories | map(sub => {
+      category: cat.name,
+      subcategory: sub
+    }))
+
+# Set-like operations (distinct values)
+let all_categories = $products
+  | map(p => p.category)
+  | distinct
+
+# Aggregations by multiple dimensions
+let category_price_ranges = $products
+  | group-by("category")
+  | map(group => {
+      category: group.key,
+      min_price: group.items | min(p => p.price),
+      max_price: group.items | max(p => p.price),
+      avg_price: group.items | mean(p => p.price)
+    })
+
+# Conditional aggregations
+let electronics_total = $products
+  | where(p => p.category == "Electronics")
+  | sum(p => p.price * p.stock)
+
+let furniture_total = $products
+  | where(p => p.category == "Furniture")
+  | sum(p => p.price * p.stock)
+
+# Batch operations
+let price_adjustments = $products
+  | map(p => {
+      id: p.id,
+      name: p.name,
+      old_price: p.price,
+      new_price: if {p.category == "Electronics"} {
+        p.price * 0.9
+      } else {
+        p.price * 0.95
+      },
+      discount: if {p.category == "Electronics"} {
+        "10%"
+      } else {
+        "5%"
+      }
+    })
+
+# Output comprehensive analysis
+{
+  inventory: {
+    total_products: $products | count,
+    categories: $all_categories,
+    low_stock_items: $low_stock
+  },
+  by_category: $by_category,
+  top_products: $top_3_expensive,
+  price_ranges: $category_price_ranges,
+  totals: {
+    electronics: $electronics_total,
+    furniture: $furniture_total,
+    grand_total: $electronics_total + $furniture_total
+  },
+  price_adjustments: $price_adjustments
+}

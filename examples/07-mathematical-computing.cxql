@@ -1,0 +1,113 @@
+# Mathematical Computing and Statistical Analysis
+
+# Basic mathematical operations
+let numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+# Statistics calculations
+let total = $numbers | sum
+let count = $numbers | count
+let average = $total / $count
+let min_value = $numbers | min
+let max_value = $numbers | max
+
+# Computations with map/reduce patterns
+let squares = $numbers | map(n => n * n)
+let cubes = $numbers | map(n => n * n * n)
+let doubled = $numbers | map(n => n * 2)
+
+# Filtering based on mathematical conditions
+let evens = $numbers | where(n => n % 2 == 0)
+let odds = $numbers | where(n => n % 2 != 0)
+let greater_than_five = $numbers | where(n => n > 5)
+
+# Range calculations
+let range = $max_value - $min_value
+let midpoint = ($max_value + $min_value) / 2
+
+# Complex mathematical expressions
+let data = [
+  {x: 10, y: 20},
+  {x: 30, y: 40},
+  {x: 50, y: 60}
+]
+
+# Distance calculations (simplified)
+let distances = $data
+  | map(point => {
+      x: point.x,
+      y: point.y,
+      distance_from_origin: point.x * point.x + point.y * point.y
+    })
+
+# Percentage calculations
+let values = [100, 200, 300, 400, 500]
+let total_value = $values | sum
+let percentages = $values
+  | map(v => {
+      value: v,
+      percentage: (v * 100) / $total_value
+    })
+
+# Compound calculations
+let sales = [
+  {product: "A", quantity: 10, price: 5.00},
+  {product: "B", quantity: 20, price: 3.50},
+  {product: "C", quantity: 15, price: 7.25}
+]
+
+let sales_analysis = $sales
+  | map(item => {
+      product: item.product,
+      quantity: item.quantity,
+      price: item.price,
+      subtotal: item.quantity * item.price,
+      tax: (item.quantity * item.price) * 0.08,
+      total: (item.quantity * item.price) * 1.08
+    })
+
+let grand_total = $sales_analysis
+  | sum(item => item.total)
+
+# Growth rate calculations
+let monthly_revenue = [1000, 1100, 1210, 1331, 1464]
+
+let growth_rates = [
+  {month: 1, revenue: 1000, growth: 0},
+  {month: 2, revenue: 1100, growth: 10},
+  {month: 3, revenue: 1210, growth: 10},
+  {month: 4, revenue: 1331, growth: 10},
+  {month: 5, revenue: 1464, growth: 10}
+]
+
+# Weighted averages
+let scores = [
+  {category: "Math", score: 85, weight: 0.4},
+  {category: "Science", score: 90, weight: 0.3},
+  {category: "English", score: 88, weight: 0.3}
+]
+
+let weighted_sum = $scores
+  | sum(s => s.score * s.weight)
+
+# Statistical summary
+{
+  basic_stats: {
+    count: $count,
+    total: $total,
+    average: $average,
+    min: $min_value,
+    max: $max_value,
+    range: $range
+  },
+  derived: {
+    evens: $evens,
+    odds: $odds,
+    squares: $squares
+  },
+  sales: {
+    items: $sales_analysis,
+    grand_total: $grand_total
+  },
+  percentages: $percentages,
+  weighted_average: $weighted_sum
+}

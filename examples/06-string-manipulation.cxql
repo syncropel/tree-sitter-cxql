@@ -1,0 +1,100 @@
+# String Manipulation and Text Processing
+
+# Simple string operations
+let text = "Hello, World!"
+let upper = $"HELLO, WORLD!"
+let lower = $"hello, world!"
+
+# String interpolation with expressions
+let name = "Alice"
+let age = 30
+let greeting = $"Hello, {$name}! You are {$age} years old."
+let math_result = $"2 + 2 = {2 + 2}"
+
+# Template generation
+let template = {
+  header: $"Report: {$name}",
+  body: $"Age: {$age}, Status: Active",
+  footer: $"Generated: {2024}-{11}-{07}"
+}
+
+# Building formatted strings from data
+let users = [
+  {name: "Alice", email: "alice@example.com", role: "admin"},
+  {name: "Bob", email: "bob@example.com", role: "user"},
+  {name: "Charlie", email: "charlie@example.com", role: "user"}
+]
+
+let formatted_users = $users
+  | map(u => $"{u.name} <{u.email}> [{u.role}]")
+
+# CSV-like formatting
+let csv_header = "name,email,role"
+let csv_rows = $users
+  | map(u => $"{u.name},{u.email},{u.role}")
+
+# Conditional string building
+let build_message = user => {
+  let status = if {user.role == "admin"} {
+    "Administrator"
+  } else {
+    "Standard User"
+  }
+  $"{user.name} is a {$status}"
+}
+
+let messages = $users | map($build_message)
+
+# Multi-line text generation
+let report = {
+  title: "User Report",
+  lines: $users
+    | map(u => $"- {u.name}: {u.email}")
+    | join("\n"),
+  summary: $"Total users: {$users | count}"
+}
+
+# URL building
+let base_url = "https://api.example.com"
+let endpoints = [
+  {path: "users", id: 123},
+  {path: "posts", id: 456},
+  {path: "comments", id: 789}
+]
+
+let urls = $endpoints
+  | map(e => $"{$base_url}/{e.path}/{e.id}")
+
+# Query string building
+let params = {
+  search: "query",
+  limit: 10,
+  offset: 0
+}
+
+let query_string = $"search={$params.search}&limit={$params.limit}&offset={$params.offset}"
+let full_url = $"{$base_url}/search?{$query_string}"
+
+# String-based data transformation
+let log_entries = [
+  {level: "INFO", message: "System started", timestamp: 1000},
+  {level: "ERROR", message: "Connection failed", timestamp: 1001},
+  {level: "WARN", message: "High memory usage", timestamp: 1002}
+]
+
+let log_lines = $log_entries
+  | map(entry => $"[{entry.timestamp}] {entry.level}: {entry.message}")
+
+# Output complex formatted result
+{
+  greeting: $greeting,
+  formatted_users: $formatted_users,
+  csv: {
+    header: $csv_header,
+    rows: $csv_rows
+  },
+  messages: $messages,
+  urls: $urls,
+  full_url: $full_url,
+  logs: $log_lines
+}
