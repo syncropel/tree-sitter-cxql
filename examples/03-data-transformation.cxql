@@ -1,0 +1,64 @@
+# Data Transformation Example: User Activity Analytics
+
+# Sample data (in real scenario, would come from database)
+let raw_events = [
+  {user: "alice", event: "login", timestamp: "2024-11-07T08:00:00Z"},
+  {user: "bob", event: "view_page", timestamp: "2024-11-07T08:15:00Z"},
+  {user: "alice", event: "purchase", timestamp: "2024-11-07T08:30:00Z"},
+  {user: "charlie", event: "login", timestamp: "2024-11-07T09:00:00Z"},
+  {user: "bob", event: "purchase", timestamp: "2024-11-07T09:30:00Z"},
+  {user: "alice", event: "logout", timestamp: "2024-11-07T10:00:00Z"}
+]
+
+# Transform and enrich
+let enriched = $raw_events
+  | map(e => {
+      user: e.user,
+      event: e.event,
+      timestamp: e.timestamp,
+      category: if {e.event == "purchase"} {
+        "conversion"
+      } else if {e.event == "login" or e.event == "logout"} {
+        "session"
+      } else {
+        "engagement"
+      },
+      score: if {e.event == "purchase"} {10} else {1}
+    })
+
+# Group by user and calculate metrics
+let user_metrics = $enriched
+  | group-by("user")
+  | map(group => {
+      user: group.key,
+      total_events: group.items | count,
+      conversions: group.items | where(e => e.category == "conversion") | count,
+      engagement_score: group.items | sum(e => e.score),
+      active: group.items | count > 2
+    })
+  | order-by("engagement_score", direction="desc")
+
+# Generate insights
+let high_value_users = $user_metrics
+  | where(u => u.conversions > 0 and u.engagement_score > 5)
+
+let at_risk_users = $user_metrics
+  | where(u => u.total_events < 3 and u.conversions == 0)
+
+# Create report
+{
+  summary: {
+    total_users: $user_metrics | count,
+    active_users: $user_metrics | where(u => u.active) | count,
+    total_conversions: $user_metrics | sum(u => u.conversions)
+  },
+  segments: {
+    high_value: $high_value_users,
+    at_risk: $at_risk_users
+  },
+  recommendations: if {$at_risk_users | count > 0} {
+    $"Send re-engagement campaign to {$at_risk_users | count} users"
+  } else {
+    "All users are engaged!"
+  }
+}

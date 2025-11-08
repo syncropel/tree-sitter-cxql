@@ -1,0 +1,40 @@
+# Data Pipeline Example: Sales Analysis
+
+# Connect to data source
+connect("db:postgres", as="db")
+
+# Load sales data
+let sales = $db.query("SELECT * FROM sales WHERE date > '2024-01-01'")
+
+# Filter and transform
+let processed = $sales
+  | where(row => row.amount > 100 and row.status == "completed")
+  | map(row => {
+      id: row.transaction_id,
+      customer: row.customer_name,
+      amount: row.amount,
+      margin: row.amount * 0.3,
+      date: row.transaction_date
+    })
+  | order-by("amount", direction="desc")
+
+# Calculate aggregates
+let total_sales = $processed | sum(row => row.amount)
+let total_margin = $processed | sum(row => row.margin)
+let customer_count = $processed | distinct("customer") | count
+
+# Generate report
+let report = {
+  title: "Q4 Sales Report",
+  period: "2024-Q4",
+  metrics: {
+    total_sales: $total_sales,
+    total_margin: $total_margin,
+    unique_customers: $customer_count,
+    average_order: $total_sales / $customer_count
+  },
+  top_customers: $processed | limit(10)
+}
+
+# Output formatted message
+$"Generated report: {$report.title} - Total Sales: {$report.metrics.total_sales}"

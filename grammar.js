@@ -254,7 +254,18 @@ module.exports = grammar({
         "if",
         field("condition", $.block),
         field("consequent", $.block),
-        optional(seq("else", field("alternative", $.block)))
+        optional(
+          seq(
+            "else",
+            field(
+              "alternative",
+              choice(
+                $.block, // Allow: else { ... }
+                $.if_expression // Allow: else if { ... } { ... } else { ... }
+              )
+            )
+          )
+        )
       ),
 
     // ============================================================================

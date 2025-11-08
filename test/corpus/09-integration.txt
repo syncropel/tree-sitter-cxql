@@ -1,0 +1,458 @@
+================================================================================
+Integration - Complete Data Pipeline
+================================================================================
+let data = get("sales.csv")
+let processed = $data
+  | where(row => row.amount > 100 and row.status == "active")
+  | map(row => {
+      id: row.id,
+      total: row.amount * 1.1,
+      category: if {row.amount > 1000} {"premium"} else {"standard"}
+    })
+  | order-by("total", direction="desc")
+  | limit(10)
+$processed
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (function_call
+      function: (identifier)
+      arguments: (argument_list
+        (string_literal))))
+  (let_statement
+    name: (identifier)
+    value: (pipe_expression
+      left: (pipe_expression
+        left: (pipe_expression
+          left: (pipe_expression
+            left: (variable_reference (identifier))
+            right: (function_call
+              function: (identifier)
+              arguments: (argument_list
+                (arrow_expression
+                  parameter: (identifier)
+                  body: (binary_expression
+                    left: (binary_expression
+                      left: (member_expression
+                        object: (identifier)
+                        property: (identifier))
+                      right: (number_literal))
+                    right: (binary_expression
+                      left: (member_expression
+                        object: (identifier)
+                        property: (identifier))
+                      right: (string_literal)))))))
+          right: (function_call
+            function: (identifier)
+            arguments: (argument_list
+              (arrow_expression
+                parameter: (identifier)
+                body: (record_literal
+                  (property
+                    key: (identifier)
+                    value: (member_expression
+                      object: (identifier)
+                      property: (identifier)))
+                  (property
+                    key: (identifier)
+                    value: (binary_expression
+                      left: (member_expression
+                        object: (identifier)
+                        property: (identifier))
+                      right: (number_literal)))
+                  (property
+                    key: (identifier)
+                    value: (if_expression
+                      condition: (block
+                        result: (binary_expression
+                          left: (member_expression
+                            object: (identifier)
+                            property: (identifier))
+                          right: (number_literal)))
+                      consequent: (block
+                        result: (string_literal))
+                      alternative: (block
+                        result: (string_literal)))))))))
+        right: (function_call
+          function: (identifier)
+          arguments: (argument_list
+            (string_literal)
+            (keyword_argument
+              name: (identifier)
+              value: (string_literal)))))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (number_literal)))))
+  (expression_statement
+    (variable_reference (identifier))))
+
+================================================================================
+Integration - Nested Pipelines With Member Access
+================================================================================
+let result = $users
+  .filter(u => u.active)
+  .map(u => {
+      name: u.profile.name,
+      score: u.metrics.value * 2,
+      emails: u.contacts.emails | map(e => e.address)
+    })
+  .reduce(acc => acc + 1)
+---
+(program
+  (let_statement
+    name: (identifier)
+    value: (function_call
+      function: (member_expression
+        object: (function_call
+          function: (member_expression
+            object: (function_call
+              function: (member_expression
+                object: (variable_reference (identifier))
+                property: (identifier))
+              arguments: (argument_list
+                (arrow_expression
+                  parameter: (identifier)
+                  body: (member_expression
+                    object: (identifier)
+                    property: (identifier)))))
+            property: (identifier))
+          arguments: (argument_list
+            (arrow_expression
+              parameter: (identifier)
+              body: (record_literal
+                (property
+                  key: (identifier)
+                  value: (member_expression
+                    object: (member_expression
+                      object: (identifier)
+                      property: (identifier))
+                    property: (identifier)))
+                (property
+                  key: (identifier)
+                  value: (binary_expression
+                    left: (member_expression
+                      object: (member_expression
+                        object: (identifier)
+                        property: (identifier))
+                      property: (identifier))
+                    right: (number_literal)))
+                (property
+                  key: (identifier)
+                  value: (pipe_expression
+                    left: (member_expression
+                      object: (member_expression
+                        object: (identifier)
+                        property: (identifier))
+                      property: (identifier))
+                    right: (function_call
+                      function: (identifier)
+                      arguments: (argument_list
+                        (arrow_expression
+                          parameter: (identifier)
+                          body: (member_expression
+                            object: (identifier)
+                            property: (identifier)))))))))))
+        property: (identifier))
+      arguments: (argument_list
+        (arrow_expression
+          parameter: (identifier)
+          body: (binary_expression
+            left: (identifier)
+            right: (number_literal)))))))
+
+================================================================================
+Integration - Connect With F-String Pipeline
+================================================================================
+connect({blueprint: $"api/{$version}"}, as="api")
+let result = $api.fetch($"users/{$id}")
+  | map(user => $"Name: {user.name}, Email: {user.email}")
+  | join(", ")
+---
+(program
+  (connect_statement
+    source: (record_literal
+      (property
+        key: (identifier)
+        value: (fstring_literal
+          (fstring_text)
+          (fstring_interpolation
+            expression: (variable_reference (identifier))))))
+    alias: (string_literal))
+  (let_statement
+    name: (identifier)
+    value: (pipe_expression
+      left: (pipe_expression
+        left: (function_call
+          function: (member_expression
+            object: (variable_reference (identifier))
+            property: (identifier))
+          arguments: (argument_list
+            (fstring_literal
+              (fstring_text)
+              (fstring_interpolation
+                expression: (variable_reference (identifier))))))
+        right: (function_call
+          function: (identifier)
+          arguments: (argument_list
+            (arrow_expression
+              parameter: (identifier)
+              body: (fstring_literal
+                (fstring_text)
+                (fstring_interpolation
+                  expression: (member_expression
+                    object: (identifier)
+                    property: (identifier)))
+                (fstring_text)
+                (fstring_interpolation
+                  expression: (member_expression
+                    object: (identifier)
+                    property: (identifier))))))))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (string_literal))))))
+
+================================================================================
+Integration - Complex Conditional With Nested Blocks
+================================================================================
+{
+  let status = if {$user.active} {
+    if {$user.premium} {
+      {
+        let discount = $user.loyalty * 0.1
+        $"Premium: {$discount}% off"
+      }
+    } else {
+      "Standard member"
+    }
+  } else {
+    "Inactive"
+  }
+  $status
+}
+---
+(program
+  (expression_statement
+    (block
+      (let_statement
+        name: (identifier)
+        value: (if_expression
+          condition: (block
+            result: (member_expression
+              object: (variable_reference (identifier))
+              property: (identifier)))
+          consequent: (block
+            result: (if_expression
+              condition: (block
+                result: (member_expression
+                  object: (variable_reference (identifier))
+                  property: (identifier)))
+              consequent: (block
+                result: (block
+                  (let_statement
+                    name: (identifier)
+                    value: (binary_expression
+                      left: (member_expression
+                        object: (variable_reference (identifier))
+                        property: (identifier))
+                      right: (number_literal)))
+                  result: (fstring_literal
+                    (fstring_text)
+                    (fstring_interpolation
+                      expression: (variable_reference (identifier)))
+                    (fstring_text))))
+              alternative: (block
+                result: (string_literal))))
+          alternative: (block
+            result: (string_literal))))
+      result: (variable_reference (identifier)))))
+
+================================================================================
+Integration - Multiple Connections And Operations
+================================================================================
+connect("db:main", as="db")
+connect({blueprint: "api/ai"}, as="ai")
+let users = $db.query("SELECT * FROM users")
+let enriched = $users
+  | map(u => {
+      data: u,
+      analysis: $ai.analyze(u.profile)
+    })
+  | where(r => r.analysis.score > 0.8)
+---
+(program
+  (connect_statement
+    source: (string_literal)
+    alias: (string_literal))
+  (connect_statement
+    source: (record_literal
+      (property
+        key: (identifier)
+        value: (string_literal)))
+    alias: (string_literal))
+  (let_statement
+    name: (identifier)
+    value: (function_call
+      function: (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier))
+      arguments: (argument_list
+        (string_literal))))
+  (let_statement
+    name: (identifier)
+    value: (pipe_expression
+      left: (pipe_expression
+        left: (variable_reference (identifier))
+        right: (function_call
+          function: (identifier)
+          arguments: (argument_list
+            (arrow_expression
+              parameter: (identifier)
+              body: (record_literal
+                (property
+                  key: (identifier)
+                  value: (identifier))
+                (property
+                  key: (identifier)
+                  value: (function_call
+                    function: (member_expression
+                      object: (variable_reference (identifier))
+                      property: (identifier))
+                    arguments: (argument_list
+                      (member_expression
+                        object: (identifier)
+                        property: (identifier))))))))))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (arrow_expression
+            parameter: (identifier)
+            body: (binary_expression
+              left: (member_expression
+                object: (member_expression
+                  object: (identifier)
+                  property: (identifier))
+                property: (identifier))
+              right: (number_literal))))))))
+
+================================================================================
+Integration - All Features Combined
+================================================================================
+connect("service:main", as="svc")
+let config = {
+  name: "pipeline",
+  version: 2.0,
+  active: true
+}
+let process = x => {
+  let doubled = x * 2
+  let squared = $doubled * $doubled
+  if {$squared > 100} {
+    $"High: {$squared}"
+  } else {
+    $"Low: {$squared}"
+  }
+}
+let data = [1, 2, 3, 4, 5]
+let result = $data
+  | map($process)
+  | where(msg => not msg == "Low: 4")
+  | map(m => {output: m, config: $config.name})
+$svc.save($result)
+---
+(program
+  (connect_statement
+    source: (string_literal)
+    alias: (string_literal))
+  (let_statement
+    name: (identifier)
+    value: (record_literal
+      (property
+        key: (identifier)
+        value: (string_literal))
+      (property
+        key: (identifier)
+        value: (number_literal))
+      (property
+        key: (identifier)
+        value: (boolean_literal))))
+  (let_statement
+    name: (identifier)
+    value: (arrow_expression
+      parameter: (identifier)
+      body: (block
+        (let_statement
+          name: (identifier)
+          value: (binary_expression
+            left: (identifier)
+            right: (number_literal)))
+        (let_statement
+          name: (identifier)
+          value: (binary_expression
+            left: (variable_reference (identifier))
+            right: (variable_reference (identifier))))
+        result: (if_expression
+          condition: (block
+            result: (binary_expression
+              left: (variable_reference (identifier))
+              right: (number_literal)))
+          consequent: (block
+            result: (fstring_literal
+              (fstring_text)
+              (fstring_interpolation
+                expression: (variable_reference (identifier)))))
+          alternative: (block
+            result: (fstring_literal
+              (fstring_text)
+              (fstring_interpolation
+                expression: (variable_reference (identifier)))))))))
+  (let_statement
+    name: (identifier)
+    value: (list_literal
+      (number_literal)
+      (number_literal)
+      (number_literal)
+      (number_literal)
+      (number_literal)))
+  (let_statement
+    name: (identifier)
+    value: (pipe_expression
+      left: (pipe_expression
+        left: (pipe_expression
+          left: (variable_reference (identifier))
+          right: (function_call
+            function: (identifier)
+            arguments: (argument_list
+              (variable_reference (identifier)))))
+        right: (function_call
+          function: (identifier)
+          arguments: (argument_list
+            (arrow_expression
+              parameter: (identifier)
+              body: (logical_not_expression
+                operand: (binary_expression
+                  left: (identifier)
+                  right: (string_literal)))))))
+      right: (function_call
+        function: (identifier)
+        arguments: (argument_list
+          (arrow_expression
+            parameter: (identifier)
+            body: (record_literal
+              (property
+                key: (identifier)
+                value: (identifier))
+              (property
+                key: (identifier)
+                value: (member_expression
+                  object: (variable_reference (identifier))
+                  property: (identifier)))))))))
+  (expression_statement
+    (function_call
+      function: (member_expression
+        object: (variable_reference (identifier))
+        property: (identifier))
+      arguments: (argument_list
+        (variable_reference (identifier))))))

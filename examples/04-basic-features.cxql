@@ -1,0 +1,57 @@
+# Basic Features Showcase
+
+# Variables and literals
+let name = "CXQL"
+let version = 1.0
+let active = true
+let config = null
+
+# Collections
+let numbers = [1, 2, 3, 4, 5]
+let person = {
+  name: "Alice",
+  age: 30,
+  email: "alice@example.com"
+}
+
+# Arithmetic and comparison
+let sum = 10 + 20
+let product = 5 * 6
+let is_valid = $sum > 25 and $product < 40
+
+# String interpolation
+let greeting = $"Hello from {$name} v{$version}!"
+let status = $"Active: {$active}, Sum: {$sum}"
+
+# Member access
+let user_name = $person.name
+let user_email = $person.email
+
+# Function calls and pipelines
+let doubled = $numbers | map(x => x * 2)
+let filtered = $doubled | where(x => x > 5)
+let total = $filtered | sum
+
+# Conditional logic
+let message = if {$total > 50} {
+  $"High total: {$total}"
+} else {
+  $"Low total: {$total}"
+}
+
+# Nested structures
+let report = {
+  metadata: {
+    title: $greeting,
+    timestamp: "2024-11-07"
+  },
+  results: {
+    numbers: $numbers,
+    processed: $filtered,
+    total: $total,
+    message: $message
+  }
+}
+
+# Output
+$report

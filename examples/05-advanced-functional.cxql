@@ -1,0 +1,90 @@
+# Advanced Functional Programming Patterns
+
+# Higher-order functions and composition
+let compose = f => g => x => $f($g(x))
+let add_ten = x => x + 10
+let double = x => x * 2
+
+# Data processing with multiple transformations
+let raw_data = [
+  {id: 1, value: 5, category: "A"},
+  {id: 2, value: 15, category: "B"},
+  {id: 3, value: 8, category: "A"},
+  {id: 4, value: 20, category: "C"},
+  {id: 5, value: 12, category: "B"}
+]
+
+# Complex pipeline with nested operations
+let analysis = $raw_data
+  | where(item => item.value > 7)
+  | map(item => {
+      id: item.id,
+      category: item.category,
+      value: item.value,
+      adjusted: item.value * 1.1,
+      grade: if {item.value > 15} {
+        "high"
+      } else if {item.value > 10} {
+        "medium"
+      } else {
+        "low"
+      }
+    })
+  | group-by("category")
+  | map(group => {
+      category: group.key,
+      items: group.items,
+      count: group.items | count,
+      total: group.items | sum(x => x.value),
+      avg: group.items | mean(x => x.value),
+      max: group.items | max(x => x.value),
+      high_performers: group.items
+        | where(x => x.grade == "high")
+        | map(x => x.id)
+    })
+  | order-by("total", direction="desc")
+
+# Recursive-style processing with nested pipelines
+let process_category = cat => {
+  let items = $raw_data | where(x => x.category == cat)
+  let enhanced = $items
+    | map(x => {
+        original: x,
+        score: x.value * 2,
+        rank: if {x.value > 15} {1} else {2}
+      })
+  
+  {
+    category: cat,
+    count: $items | count,
+    items: $enhanced,
+    top_item: $enhanced
+      | order-by("score", direction="desc")
+      | limit(1)
+      | first
+  }
+}
+
+# Apply to all categories
+let categories = ["A", "B", "C"]
+let category_reports = $categories | map($process_category)
+
+# Generate summary with nested aggregations
+let summary = {
+  by_category: $analysis,
+  detailed: $category_reports,
+  overall: {
+    total_items: $raw_data | count,
+    total_value: $raw_data | sum(x => x.value),
+    avg_value: $raw_data | mean(x => x.value),
+    categories: $categories | count,
+    high_value_count: $raw_data
+      | where(x => x.value > 15)
+      | count
+  },
+  insights: $analysis
+    | where(c => c.count > 1)
+    | map(c => $"Category {c.category} has {c.count} items with total {c.total}")
+}
+
+$summary

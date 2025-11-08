@@ -1,0 +1,46 @@
+# API Integration Example: Weather Data Processing
+
+# Connect to external APIs
+connect({
+  blueprint: "community/openai@1.0",
+  secrets: {api_key: "sk-xxx"}
+}, as="ai")
+
+connect("api:weather", as="weather")
+
+# Fetch weather data for multiple cities
+let cities = ["Vancouver", "Toronto", "Montreal", "Calgary"]
+
+let weather_data = $cities
+  | map(city => {
+      name: city,
+      data: $weather.get($"locations/{city}/current")
+    })
+  | where(result => result.data.temperature > 0)
+
+# Analyze patterns
+let analysis = $weather_data
+  | map(item => {
+      city: item.name,
+      temp: item.data.temperature,
+      condition: item.data.condition,
+      feels_like: item.data.feels_like,
+      comfortable: if {item.data.temperature > 15 and item.data.temperature < 25} {
+        true
+      } else {
+        false
+      }
+    })
+
+# Generate summary with AI
+let summary_prompt = $"Summarize this weather data: {$analysis}"
+let ai_summary = $ai.complete(summary_prompt, max_tokens=100)
+
+# Build response
+{
+  timestamp: "2024-11-07T12:00:00Z",
+  cities_analyzed: $cities | count,
+  comfortable_cities: $analysis | where(c => c.comfortable) | count,
+  data: $analysis,
+  ai_insights: $ai_summary
+}
